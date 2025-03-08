@@ -34,7 +34,7 @@ function memberListCheck() {
     
     // If needed print this
     var rawResponse = response.getContentText();
-    //Logger.log(`Raw Response for interval ${interval}: ${rawResponse}`);
+    //Logger.log(`Raw Response: ${rawResponse}`);
 
     var data = JSON.parse(rawResponse);
     
