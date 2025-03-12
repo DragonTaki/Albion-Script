@@ -9,23 +9,30 @@
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Master');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Master");
   
   // Get column indexes based on column titles
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var playerIndex = headers.indexOf("Player") + 1;
-  var inGuildIndex = headers.indexOf("In Guild") + 1;
-  var past7Index = headers.indexOf("Past 7 Days") + 1;
-  var past14Index = headers.indexOf("Past 14 Days") + 1;
-  var past28Index = headers.indexOf("Past 28 Days") + 1;
-  var commentIndex = headers.indexOf("Comment") + 1;
-  var markIndex = headers.indexOf("Mark") + 1;
-  
-  if (playerIndex === 0 || inGuildIndex === 0 || past7Index === 0 || 
-      past14Index === 0 || past28Index === 0 || commentIndex === 0 || markIndex === 0) {
-    Logger.log("Error: One or more required columns not found!");
+  // Column headers
+  var columnNames = ["Player", "In Guild", "Past 7 Days", "Past 14 Days", "Past 28 Days", "Comment", "Mark"];
+  // Get column indexes based on column titles
+  var indexes = columnNames.map(name => headers.indexOf(name) + 1);
+
+  // Check if any required column is missing
+  var missingColumns = columnNames.filter((name, index) => indexes[index] === 0);
+  if (missingColumns.length > 0) {
+    Logger.log(`Error: The following required columns are missing: ${missingColumns.join(", ")}`);
     return;
   }
+
+  // Extract individual column indexes
+  var playerIndex = indexes[0]; 
+  var inGuildIndex = indexes[1];
+  var past7Index = indexes[2];
+  var past14Index = indexes[3];
+  var past28Index = indexes[4];
+  var commentIndex = indexes[5];
+  var markIndex = indexes[6];
 
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
@@ -33,13 +40,13 @@ function attendanceCheck() {
     return;
   }
 
-  // Read data in bulk to reduce API calls
+  // Read existing data
   var playerNames = sheet.getRange(2, playerIndex, lastRow - 1).getValues();
   var inGuildStatus = sheet.getRange(2, inGuildIndex, lastRow - 1).getValues();
   var markStatus = sheet.getRange(2, markIndex, lastRow - 1).getValues();
 
   // Variables
-  var guildName = 'Tang Yuan';
+  var guildName = "Tang Yuan";
   var results7Days = new Array(playerNames.length).fill("No data");
   var results14Days = new Array(playerNames.length).fill("No data");
   var results28Days = new Array(playerNames.length).fill("No data");
@@ -105,7 +112,7 @@ function attendanceCheck() {
       var attendanceCount = playerData ? (playerData.battleNumber || 0) : 0;
 
       // If the player is not in the guild, set attendance to "No data"
-      if (playerStatus === 'No') {
+      if (playerStatus === "No") {
         attendanceCount = "No data";
       }
 
