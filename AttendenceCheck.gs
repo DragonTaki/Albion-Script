@@ -9,7 +9,7 @@
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Copy of Master');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Master');
   
   // Get column indexes based on column titles
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
