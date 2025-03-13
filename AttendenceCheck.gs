@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
-// Update Date: 2025/03/12
-// Version: v2.1
+// Update Date: 2025/03/14
+// Version: v2.2
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
@@ -102,7 +102,7 @@ function attendanceCheck() {
     //Logger.log(`Processing player: ${playerName}`);
 
     // If marked as "Not guild member", force "In Guild" status to "No"
-    if (mark === "Not guild member") {
+    if (mark === "Not guild member (Force mark)") {
       sheet.getRange(index + 2, inGuildIndex).setValue("No");
       playerStatus = "No";
     }
