@@ -4,14 +4,14 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
-// Update Date: 2025/03/12
-// Version: v2.1
+// Update Date: 2025/03/14
+// Version: v2.2
 /*----- ----- ----- -----*/
 
 function memberListCheck() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Master");
-  var lastRow = sheet.getLastRow();
-  
+  var lastRow = sheet.getMaxRows();
+
   if (lastRow < 2) {
     Logger.log("Error: 'Master' tab doesn't have enough rows (need >= 2).");
     return;
@@ -46,6 +46,17 @@ function memberListCheck() {
   var past7Status = sheet.getRange(2, past7Index, lastRow - 1).getValues().flat();
   var past14Status = sheet.getRange(2, past14Index, lastRow - 1).getValues().flat();
   var past28Status = sheet.getRange(2, past28Index, lastRow - 1).getValues().flat();
+
+  // Get last info board row+2
+  var lastLRow = lastRow;
+  var LColumnValues = sheet.getRange(2, 12, lastRow - 1).getValues().flat();
+  for (var i = LColumnValues.length - 1; i >= 0; i--) {
+    if (String(LColumnValues[i]).trim() !== "") {
+      lastLRow = i + 2;
+      break;
+    }
+  }
+  var deleteThreshold = lastLRow + 2; // The last row can be delete
 
   // Variables
   var guildId = "k0TF-1dGQLSBmWqusGHBHQ";
@@ -94,7 +105,7 @@ function memberListCheck() {
   var today = new Date();
   var commentDate = Utilities.formatDate(today, "UTC", "dd/MM/yy");
 
-  // Insert new players before deletion
+  // Insert new players first
   if (newEntries.length > 0) {
     newEntries.forEach(newName => {
       var newRowIndex = lastYesRow + 1;
@@ -109,29 +120,65 @@ function memberListCheck() {
       // Copy formula from previous row and apply to new row in "Fight Role"
       var prevFormula = sheet.getRange(lastYesRow, inFightRoleIndex).getFormula();
       if (prevFormula) {
-        var updatedFormula = prevFormula.replace(/(\$?A)\d+/g, `$1${newRowIndex}`);
+        var updatedFormula = prevFormula.replace(/(\$?[A-Z])\d+/g, `$1${newRowIndex}`);
         sheet.getRange(newRowIndex, inFightRoleIndex).setFormula(updatedFormula);
       }
 
       lastYesRow++;
     });
+
+    lastRow = sheet.getMaxRows();
   }
 
-  // Delete old players
+  // Sort table before deletion
+  var range = sheet.getRange(1, 1, lastRow, sheet.getLastColumn());
+  var filter = sheet.getFilter();
+  if (filter) {
+    filter.sort(1, true);
+    filter.sort(2, false);
+    Logger.log("Successfully sorted the table.");
+
+    var filterRange = filter.getRange();
+    var filterColumnCount = filterRange.getLastColumn();
+  } else {
+    Logger.log("Error: No existing filter found.");
+  }
+
+  // Re-read table before deletion
+  var existingNames = sheet.getRange(2, playerIndex, lastRow - 1).getValues().flat();
+  var inGuildStatus = sheet.getRange(2, inGuildIndex, lastRow - 1).getValues().flat();
+  var markStatus = sheet.getRange(2, markIndex, lastRow - 1).getValues().flat();
+  var past7Status = sheet.getRange(2, past7Index, lastRow - 1).getValues().flat();
+  var past14Status = sheet.getRange(2, past14Index, lastRow - 1).getValues().flat();
+  var past28Status = sheet.getRange(2, past28Index, lastRow - 1).getValues().flat();
+
+  // Delete old players and empty rows
   for (var i = lastRow - 1; i >= 1; i--) {
+    var playerName = existingNames[i - 1] ? String(existingNames[i - 1]).trim() : "";
     var currentStatus = inGuildStatus[i - 1];
     var past7Data = past7Status[i - 1];
     var past14Data = past14Status[i - 1];
     var past28Data = past28Status[i - 1];
+    var markData = markStatus[i - 1];
 
     if (currentStatus === "No" && 
         String(past7Data).trim() === noDataString && 
         String(past14Data).trim() === noDataString && 
-        String(past28Data).trim() === noDataString) {
-      sheet.deleteRow(i + 1);
-      lastRow--;
-      Logger.log("One row deleted.");
+        String(past28Data).trim() === noDataString &&
+        String(markData).trim() === "") {
+      if (i + 1 > deleteThreshold) { 
+        sheet.deleteRow(i + 1);
+        Logger.log(`Deleted one row for inactive player: "${playerName}".`);
+      } else {
+      sheet.getRange(i + 1, 1, 1, filterColumnCount).clearContent();
+        Logger.log(`This row contains info card. Only cleared content for columns with filter: "${playerName}".`);
+      }
       continue;
+    }
+
+    if (!playerName && i + 1 > deleteThreshold) {
+      sheet.deleteRow(i + 1);
+      Logger.log("Deleted one empty row.");
     }
   }
 
