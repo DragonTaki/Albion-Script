@@ -18,11 +18,15 @@ function memberListCheck() {
 
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    Logger.log(`Error: Tab "${sheet}" not found.`);
+    return;
+  }
   var lastCol = sheet.getLastColumn();
   var lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {
-    Logger.log("Error: 'Master' tab doesn't have enough rows (need >= 2). ");
+    Logger.log(`Error: Tab "${sheet}" tab doesn't have enough rows (need >= 2).`);
     return;
   }
   
@@ -48,7 +52,7 @@ function memberListCheck() {
   var inGuildStatus = new Map();
   
   if (!data || data.length === 0) {
-    Logger.log("Error: No data retrieved from the 'Master' sheet.");
+    Logger.log(`Error: No data retrieved from the tab "Master".`);
     return;
   }
 
@@ -72,23 +76,27 @@ function memberListCheck() {
 
   // Fetch guild members from API
   var url = `https://gameinfo-sgp.albiononline.com/api/gameinfo/guilds/${guildId}/members`;
-  var options = { "method": "GET", "headers": { "Accept": "application/json, text/plain, */*" }, "muteHttpExceptions": true };
+  var options = {
+    "method": "GET",
+    "headers": { "Accept": "application/json, text/plain, */*" },
+    "muteHttpExceptions": true
+    };
 
   try {
     var response = UrlFetchApp.fetch(url, options);
     if (response.getResponseCode() !== 200) {
-      Logger.log(`Error: HTTP response code ${response.getResponseCode()}`);
+      Logger.log(`Error: HTTP response code ${response.getResponseCode()}.`);
       return;
     }
 
     var fetchedData = JSON.parse(response.getContentText());
     if (!fetchedData || fetchedData.length === 0) {
-      Logger.log("Error: No data received from API.");
+      Logger.log(`Error: No data received from API.`);
       return;
     }
-    Logger.log("Successfully fetched member list!");
+    Logger.log(`Successfully fetched member list!`);
   } catch (error) {
-    Logger.log(`Error during member list fetch: ${error}`);
+    Logger.log(`Error during member list fetch: ${error}.`);
     return;
   }
 
@@ -115,8 +123,8 @@ function memberListCheck() {
     // If the player is no longer in the guild, update the "In Guild" column
     if (playerName && !guildMembers.has(playerName) && currentGuildStatus !== inGuildNo) {
       sheet.getRange(i + 2, inGuildIndex).setValue(inGuildNo);
-      sheet.getRange(i + 2, commentIndex).setValue(`${commentDate} player left guild checked by bot`);  // Add comment
-      Logger.log(`"${playerName}" no longer in guild, updated in-guild status to "No".`);
+      sheet.getRange(i + 2, commentIndex).setValue(`${commentDate} player left guild checked by bot.`);  // Add comment
+      Logger.log(`"${playerName}" no longer in guild, updated in-guild status to "${inGuildNo}".`);
     }
   });
 
@@ -127,7 +135,7 @@ function memberListCheck() {
       sheet.insertRowAfter(lastYesRow);
       sheet.getRange(lastYesRow + 1, playerIndex).setValue(newName);
       sheet.getRange(lastYesRow + 1, inGuildIndex).setValue(inGuildYes);
-      sheet.getRange(lastYesRow + 1, commentIndex).setValue(`${commentDate} new guild player added by bot`);
+      sheet.getRange(lastYesRow + 1, commentIndex).setValue(`${commentDate} new guild player added by bot.`);
 
       // Copy formula from previous row and apply to new row in "Fight Role"
       var prevFormula = sheet.getRange(lastYesRow, inFightRoleIndex).getFormula();
@@ -143,9 +151,9 @@ function memberListCheck() {
   // Step 3: Sort table before deletion
   if (sheet.getFilter()) {
     sheet.getFilter().sort(1, true).sort(2, false);
-    Logger.log("Successfully sorted the table.");
+    Logger.log(`Successfully sorted the table.`);
   } else {
-    Logger.log("Error: No existing filter found.");
+    Logger.log(`Error: No existing filter found.`);
   }
 
   // Re-read table before deletion
@@ -179,7 +187,7 @@ function memberListCheck() {
 
     if (!playerName && i + 1 > deleteThreshold) {
       sheet.deleteRow(i + 1);
-      Logger.log("Deleted one empty row.");
+      Logger.log(`Deleted one empty row.`);
     }
   }
 
@@ -192,10 +200,10 @@ function memberListCheck() {
     var rowIndex = Math.floor(index / lastCol) + 1;
     var colIndex = (index % lastCol) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
-    Logger.log("'Player List Updated' timestamp saved at row " + rowIndex + ", col " + colIndex);
+    Logger.log(`'Player List Updated' timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
     Logger.log(`Error: "${searchText}" not found in sheet.`);
   }
 
-  Logger.log("Member list updated!");
+  Logger.log(`Member list updated!`);
 }
