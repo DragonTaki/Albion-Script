@@ -10,8 +10,8 @@
 
 function memberListCheck() {
   // Variables for user
-  //var sheetName = "Master";
-  var sheetName = "Copy of Master";
+  var sheetName = "Master";
+  //var sheetName = "Copy of Master";
   var noDataString = "No data";
   var inGuildYes = "Yes";
   var inGuildNo = "No";
