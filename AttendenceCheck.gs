@@ -18,11 +18,15 @@ function attendanceCheck() {
   var attendanceNoData = "No data";
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    Logger.log(`Error: Sheet "${sheet}" not found.`);
+    return;
+  }
   var lastCol = sheet.getLastColumn();
   var lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {
-    Logger.log("Error: 'Master' tab doesn't have enough rows (need >= 2). ");
+    Logger.log(`Error: Tab "${sheet}" tab doesn't have enough rows (need >= 2).`);
     return;
   }
   
@@ -33,7 +37,7 @@ function attendanceCheck() {
   
   // Check if any required column is missing
   if (indexes.includes(0)) {
-    Logger.log(`Error: Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}`);
+    Logger.log(`Error: Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}.`);
     return;
   }
   
@@ -61,7 +65,7 @@ function attendanceCheck() {
     try {
       var response = UrlFetchApp.fetch(url, options);
       if (response.getResponseCode() !== 200) {
-        Logger.log(`Error: HTTP response code ${response.getResponseCode()}`);
+        Logger.log(`Error: HTTP response code ${response.getResponseCode()}.`);
         return;
       }
       var data = JSON.parse(response.getContentText());
@@ -72,7 +76,7 @@ function attendanceCheck() {
       fetchedData[interval] = new Map(data.map(player => [player.name, player.battleNumber || 0]));
       Logger.log(`Successfully fetched attendance data for ${interval} days.`);
     } catch (error) {
-      Logger.log(`Error fetching attendance: ${error}`);
+      Logger.log(`Error during attendance fetch: ${error}.`);
     }
   });
 
@@ -109,10 +113,10 @@ function attendanceCheck() {
     var rowIndex = Math.floor(index / lastCol) + 1;
     var colIndex = (index % lastCol) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
-    Logger.log("'Attendance Updated' timestamp saved at row " + rowIndex + ", col " + colIndex);
+    Logger.log(`'Player List Updated' timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
     Logger.log(`Error: "${searchText}" not found in sheet.`);
   }
   
-  Logger.log("Attendance data saved!");
+  Logger.log(`Attendance data updated!`);
 }
