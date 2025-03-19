@@ -5,7 +5,7 @@
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
 // Update Date: 2025/03/19
-// Version: v3.1
+// Version: v3.2
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
@@ -13,6 +13,9 @@ function attendanceCheck() {
   var sheetName = "Master";
   //var sheetName = "Copy of Master";
   var forceMark = ["Not guild member (Force mark)"];
+  var inGuildYes = "Yes";
+  var inGuildNo = "No";
+  var attendanceNoData = "No data";
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   var lastCol = sheet.getLastColumn();
@@ -83,13 +86,13 @@ function attendanceCheck() {
     if (!playerName) return;
     
     if (forceMark.includes(mark)) {
-      row[inGuildIndex - 1] = "No";
-      playerStatus = "No";
+      row[inGuildIndex - 1] = inGuildNo;
+      playerStatus = inGuildNo;
     }
 
-    results7Days[i] = playerStatus === "No" ? "No data" : (fetchedData[7]?.get(playerName) || 0);
-    results14Days[i] = playerStatus === "No" ? "No data" : (fetchedData[14]?.get(playerName) || 0);
-    results28Days[i] = playerStatus === "No" ? "No data" : (fetchedData[28]?.get(playerName) || 0);
+    results7Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[7]?.get(playerName) || 0);
+    results14Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[14]?.get(playerName) || 0);
+    results28Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[28]?.get(playerName) || 0);
   });
 
   // Batch update attendance data
