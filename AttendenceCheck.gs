@@ -5,13 +5,14 @@
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
 // Update Date: 2025/03/19
-// Version: v3.0
+// Version: v3.1
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
   // Variables for user
   var sheetName = "Master";
   //var sheetName = "Copy of Master";
+  var forceMark = ["Not guild member (Force mark)"];
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   var lastCol = sheet.getLastColumn();
@@ -24,7 +25,7 @@ function attendanceCheck() {
   
   // Get column indexes based on column titles
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var columnNames = ["Player", "In Guild", "Past 7 Days", "Past 14 Days", "Past 28 Days", "Comment", "Mark"];
+  var columnNames = ["Player", "In Guild", "Past 7 Days", "Past 14 Days", "Past 28 Days", "Comment", "Force Mark"];
   var indexes = columnNames.map(name => headers.indexOf(name) + 1);
   
   // Check if any required column is missing
@@ -81,7 +82,7 @@ function attendanceCheck() {
     var mark = row[markIndex - 1];
     if (!playerName) return;
     
-    if (mark === "Not guild member (Force mark)") {
+    if (forceMark.includes(mark)) {
       row[inGuildIndex - 1] = "No";
       playerStatus = "No";
     }
