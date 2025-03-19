@@ -10,8 +10,8 @@
 
 function memberListCheck() {
   // Variables for user
-  var sheetName = "Master";
-  //var sheetName = "Copy of Master";
+  //var sheetName = "Master";
+  var sheetName = "Copy of Master";
   var noDataString = "No data";
   var inGuildYes = "Yes";
   var inGuildNo = "No";
@@ -106,7 +106,21 @@ function memberListCheck() {
   var today = new Date();
   var commentDate = Utilities.formatDate(today, "UTC", "dd/MM/yy");
 
-  // Insert new players first
+  // Step 1: Check existing members' guild status
+  var guildMembers = new Set(fetchedData.map(player => player.Name));
+  data.forEach((row, i) => {
+    var playerName = row[playerIndex - 1];
+    var currentGuildStatus = row[inGuildIndex - 1];
+    
+    // If the player is no longer in the guild, update the "In Guild" column
+    if (playerName && !guildMembers.has(playerName) && currentGuildStatus !== inGuildNo) {
+      sheet.getRange(i + 2, inGuildIndex).setValue(inGuildNo);
+      sheet.getRange(i + 2, commentIndex).setValue(`${commentDate} player left guild checked by bot`);  // Add comment
+      Logger.log(`"${playerName}" no longer in guild, updated in-guild status to "No".`);
+    }
+  });
+
+  // Step 2: Insert new players
   if (newEntries.length > 0) {
     newEntries.forEach(newName => {
       var newRowIndex = lastYesRow + 1;
@@ -126,7 +140,7 @@ function memberListCheck() {
     });
   }
 
-  // Sort table before deletion
+  // Step 3: Sort table before deletion
   if (sheet.getFilter()) {
     sheet.getFilter().sort(1, true).sort(2, false);
     Logger.log("Successfully sorted the table.");
@@ -139,7 +153,7 @@ function memberListCheck() {
   dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol);
   data = dataRange.getValues();
 
-  // Delete old players and empty rows
+  // Step 4: Delete old players and empty rows
   for (var i = lastRow - 1; i >= 1; i--) {
     var playerName = (data[i - 1] && data[i - 1][playerIndex - 1]) ? String(data[i - 1][playerIndex - 1]).trim() : "";
     var currentStatus = data[i - 1][inGuildIndex - 1];
