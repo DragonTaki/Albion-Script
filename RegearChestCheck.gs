@@ -1,5 +1,5 @@
 /*----- ----- ----- -----*/
-// RegearChestCheckIfMember.gs
+// RegearChestCheck.gs
 // For Albion Online "Tang Yuan" Guild only
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
@@ -8,7 +8,7 @@
 // Version: v1.2
 /*----- ----- ----- -----*/
 
-function regearChestCheckIfMember() {
+function regearChestCheck() {
   // Variables for user
   var sheetName = "FS ISLAND";
   //var sheetName = "Copy of FS ISLAND";
