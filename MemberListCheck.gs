@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
-// Update Date: 2025/03/19
-// Version: v3.0
+// Update Date: 2025/03/20
+// Version: v3.1
 /*----- ----- ----- -----*/
 
 function memberListCheck() {
@@ -16,28 +16,27 @@ function memberListCheck() {
   var inGuildYes = "Yes";
   var inGuildNo = "No";
 
-
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) {
-    Logger.log(`Error: Tab "${sheet}" not found.`);
+    msgLogger(`Sheet "${sheet}" not found.`, "e");
     return;
   }
   var lastCol = sheet.getLastColumn();
   var lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {
-    Logger.log(`Error: Tab "${sheet}" tab doesn't have enough rows (need >= 2).`);
+    msgLogger(`Sheet "${sheet}" doesn't have enough rows (need >= 2).`, "e");
     return;
   }
   
   // Get column indexes based on column titles
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var columnNames = ["Player", "In Guild", "Fight Role", "Past 7 Days", "Past 14 Days", "Past 28 Days", "Comment", "Mark"];
+  var columnNames = ["Player", "In Guild", "Fight Role", "Past 7 Days", "Past 14 Days", "Past 28 Days", "Comment", "Force Mark"];
   var indexes = columnNames.map(name => headers.indexOf(name) + 1);
 
   // Check if any required column is missing
   if (indexes.includes(0)) {
-    Logger.log(`Error: Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}`);
+    msgLogger(`Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}.`, "e");
     return;
   }
 
@@ -52,7 +51,7 @@ function memberListCheck() {
   var inGuildStatus = new Map();
   
   if (!data || data.length === 0) {
-    Logger.log(`Error: No data retrieved from the tab "Master".`);
+    msgLogger(`No data retrieved from the sheet ${sheetName}.`, "e");
     return;
   }
 
@@ -85,18 +84,18 @@ function memberListCheck() {
   try {
     var response = UrlFetchApp.fetch(url, options);
     if (response.getResponseCode() !== 200) {
-      Logger.log(`Error: HTTP response code ${response.getResponseCode()}.`);
+      msgLogger(`HTTP response code ${response.getResponseCode()}.`, "e");
       return;
     }
 
     var fetchedData = JSON.parse(response.getContentText());
     if (!fetchedData || fetchedData.length === 0) {
-      Logger.log(`Error: No data received from API.`);
+      msgLogger(`No data received from API.`, "e");
       return;
     }
-    Logger.log(`Successfully fetched member list!`);
+    msgLogger(`Successfully fetched member list!`);
   } catch (error) {
-    Logger.log(`Error during member list fetch: ${error}.`);
+    msgLogger(`Error during member list fetch: ${error}.`, "e");
     return;
   }
 
@@ -124,7 +123,7 @@ function memberListCheck() {
     if (playerName && !guildMembers.has(playerName) && currentGuildStatus !== inGuildNo) {
       sheet.getRange(i + 2, inGuildIndex).setValue(inGuildNo);
       sheet.getRange(i + 2, commentIndex).setValue(`${commentDate} player left guild checked by bot.`);  // Add comment
-      Logger.log(`"${playerName}" no longer in guild, updated in-guild status to "${inGuildNo}".`);
+      msgLogger(`"${playerName}" no longer in guild, updated in-guild status to "${inGuildNo}".`);
     }
   });
 
@@ -151,9 +150,9 @@ function memberListCheck() {
   // Step 3: Sort table before deletion
   if (sheet.getFilter()) {
     sheet.getFilter().sort(1, true).sort(2, false);
-    Logger.log(`Successfully sorted the table.`);
+    msgLogger(`Successfully sorted the table.`);
   } else {
-    Logger.log(`Error: No existing filter found.`);
+    msgLogger(`No existing filter found.`, "e");
   }
 
   // Re-read table before deletion
@@ -177,33 +176,56 @@ function memberListCheck() {
         String(markData).trim() === "") {
       if (i + 1 > deleteThreshold) { 
         sheet.deleteRow(i + 1);
-        Logger.log(`Deleted one row for inactive player: "${playerName}".`);
+        msgLogger(`Deleted one row for inactive player: "${playerName}".`);
       } else {
       sheet.getRange(i + 1, 1, 1, filterColumnCount).clearContent();
-        Logger.log(`This row contains info card. Only cleared content for columns with filter: "${playerName}".`);
+        msgLogger(`This row contains info card. Only cleared content for columns with filter: "${playerName}".`);
       }
       continue;
     }
 
     if (!playerName && i + 1 > deleteThreshold) {
       sheet.deleteRow(i + 1);
-      Logger.log(`Deleted one empty row.`);
+      msgLogger(`Deleted one empty row.`);
     }
   }
 
   // Save updated timestamp
-  var searchText = "Player List Updated:";
+  var searchText = "Player List Updated";
   var values = sheet.getDataRange().getValues().flat();
-  var index = values.indexOf(searchText);
+  var index = values.findIndex(text => typeof text === "string" && text.startsWith(searchText + ":"));
   
   if (index !== -1) {
     var rowIndex = Math.floor(index / lastCol) + 1;
     var colIndex = (index % lastCol) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
-    Logger.log(`'Player List Updated' timestamp saved at row ${rowIndex}, col ${colIndex}.`);
+    msgLogger(`"${searchText}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
-    Logger.log(`Error: "${searchText}" not found in sheet.`);
+    msgLogger(`"${searchText}" not found in sheet.`, "e");
   }
 
-  Logger.log(`Member list updated!`);
+  msgLogger(`Member list updated!`);
+}
+
+/**
+ * Log messages with timestamps and different severity levels.
+ * If level is "e", logs as error.
+ * If level is "w", logs as warning.
+ * If level is omitted, logs as info.
+ * @param {string} message - The message to log.
+ * @param {string} [level] - The severity level.
+ */
+function msgLogger(message, level) {
+  var now = new Date();
+  var timeZone = Session.getScriptTimeZone();
+  var timestamp = Utilities.formatDate(now, timeZone, "yyyy/MM/dd HH:mm:ss");
+
+  var prefix = "Info";
+  if (level === "e") {
+    prefix = "Error";
+  } else if (level === "w") {
+    prefix = "Warn";
+  }
+
+  Logger.log(`${timestamp} [${prefix}] ${message}`);
 }
