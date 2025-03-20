@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
-// Update Date: 2025/03/19
-// Version: v3.2
+// Update Date: 2025/03/20
+// Version: v3.3
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
@@ -19,14 +19,14 @@ function attendanceCheck() {
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) {
-    Logger.log(`Error: Sheet "${sheet}" not found.`);
+    msgLogger(`Sheet "${sheet}" not found.`, "e");
     return;
   }
   var lastCol = sheet.getLastColumn();
   var lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {
-    Logger.log(`Error: Tab "${sheet}" tab doesn't have enough rows (need >= 2).`);
+    msgLogger(`Sheet "${sheet}" doesn't have enough rows (need >= 2).`, "e");
     return;
   }
   
@@ -37,7 +37,7 @@ function attendanceCheck() {
   
   // Check if any required column is missing
   if (indexes.includes(0)) {
-    Logger.log(`Error: Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}.`);
+    msgLogger(`Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}.`, "e");
     return;
   }
   
@@ -65,22 +65,22 @@ function attendanceCheck() {
     try {
       var response = UrlFetchApp.fetch(url, options);
       if (response.getResponseCode() !== 200) {
-        Logger.log(`Error: HTTP response code ${response.getResponseCode()}.`);
+        msgLogger(`HTTP response code ${response.getResponseCode()}.`, "e");
         return;
       }
       var data = JSON.parse(response.getContentText());
       if (!Array.isArray(data)) {
-        Logger.log(`Invalid response format: ${JSON.stringify(data)}`);
+        msgLogger(`Invalid response format: ${JSON.stringify(data)}`, "e");
         return;
       }
       fetchedData[interval] = new Map(data.map(player => [player.name, player.battleNumber || 0]));
-      Logger.log(`Successfully fetched attendance data for ${interval} days.`);
+      msgLogger(`Successfully fetched attendance data for ${interval} days.`);
     } catch (error) {
-      Logger.log(`Error during attendance fetch: ${error}.`);
+      msgLogger(`Error during attendance fetch: ${error}.`, "e");
     }
   });
 
-  // Process each player and update attendance records in bulk
+  // Step 1: Process each player and update attendance records in bulk
   var results7Days = [], results14Days = [], results28Days = [];
   
   dataRange.forEach((row, i) => {
@@ -99,24 +99,47 @@ function attendanceCheck() {
     results28Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[28]?.get(playerName) || 0);
   });
 
-  // Batch update attendance data
+  // Step 2: Batch update attendance data
   sheet.getRange(2, past7Index, lastRow - 1).setValues(results7Days.map(v => [v]));
   sheet.getRange(2, past14Index, lastRow - 1).setValues(results14Days.map(v => [v]));
   sheet.getRange(2, past28Index, lastRow - 1).setValues(results28Days.map(v => [v]));
   
   // Update timestamp
-  var searchText = "Attendance Updated:";
+  var searchText = "Attendance Updated";
   var values = sheet.getDataRange().getValues().flat();
-  var index = values.indexOf(searchText);
+  var index = values.findIndex(text => typeof text === "string" && text.startsWith(searchText + ":"));
   
   if (index !== -1) {
     var rowIndex = Math.floor(index / lastCol) + 1;
     var colIndex = (index % lastCol) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
-    Logger.log(`'Player List Updated' timestamp saved at row ${rowIndex}, col ${colIndex}.`);
+    msgLogger(`"${searchText}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
-    Logger.log(`Error: "${searchText}" not found in sheet.`);
+    msgLogger(`"${searchText}" not found in sheet.`, "e");
   }
   
-  Logger.log(`Attendance data updated!`);
+  msgLogger(`Attendance data updated!`);
+}
+
+/**
+ * Log messages with timestamps and different severity levels.
+ * If level is "e", logs as error.
+ * If level is "w", logs as warning.
+ * If level is omitted, logs as info.
+ * @param {string} message - The message to log.
+ * @param {string} [level] - The severity level.
+ */
+function msgLogger(message, level) {
+  var now = new Date();
+  var timeZone = Session.getScriptTimeZone();
+  var timestamp = Utilities.formatDate(now, timeZone, "yyyy/MM/dd HH:mm:ss");
+
+  var prefix = "Info";
+  if (level === "e") {
+    prefix = "Error";
+  } else if (level === "w") {
+    prefix = "Warn";
+  }
+
+  Logger.log(`${timestamp} [${prefix}] ${message}`);
 }
