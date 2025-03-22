@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/19
-// Update Date: 2025/03/21
-// Version: v1.2
+// Update Date: 2025/03/23
+// Version: v1.3
 /*----- ----- ----- -----*/
 
 function regearChestCheck() {
@@ -44,6 +44,13 @@ function regearChestCheck() {
     if (row[1] === inGuildYes) {
       memberList.add(row[0].trim());
     }
+  });
+
+  // Use map to store
+  // Lower case as key, original case as value
+  var memberMap = new Map();
+  memberList.forEach(member => {
+    memberMap.set(member.toLowerCase(), member);
   });
   
   // Read regear chest player data
@@ -85,15 +92,7 @@ function regearChestCheck() {
 
   // Helper function: Case-insensitive matching and name correction
   function getCorrectCaseName(playerName) {
-    // Iterate through the guild member list to find a match
-    for (var member of memberList) {
-      if (member.toLowerCase() === playerName.toLowerCase()) {
-        // Return the correctly cased name
-        return member;
-      }
-    }
-    // If no match is found, return the original name
-    return playerName;
+    return memberMap.get(playerName.toLowerCase()) || playerName;
   }
 
   // Helper function: Fuzzy color matching with roleColorMap colors
