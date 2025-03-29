@@ -4,16 +4,16 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/19
-// Update Date: 2025/03/23
-// Version: v1.3
+// Update Date: 2025/03/29
+// Version: v2.0
 /*----- ----- ----- -----*/
 
 function regearChestCheck() {
   // Variables for user
   var sheetName = "FS ISLAND";
   //var sheetName = "Copy of FS ISLAND";
-  var inGuildYes = "Yes";
-  var inGuildNo = "No";
+  var inGuildYes = ["MC", "TY"];
+  var inGuildNo = "❌";
 
   // Member List Variables
   var sheetIdMemberList = "1KsGoAs1y-Yu8EvefVExg5XDTXOS2ngwl88eYu0m4NjQ";
@@ -37,20 +37,16 @@ function regearChestCheck() {
   
   // Read member list
   var dataMemberList = sheetMemberList.getRange("A2:B").getValues();
-  var memberList = new Set();
+  var memberMap = new Map();
   
   // Only include players in guild
   dataMemberList.forEach(row => {
-    if (row[1] === inGuildYes) {
-      memberList.add(row[0].trim());
+    var playerName = row[0]?.trim();
+    var guildName = row[1]?.trim();
+    
+    if (playerName && guildName && guildName !== inGuildNo) {
+      memberMap.set(playerName.toLowerCase(), { originalName: playerName, guild: guildName });
     }
-  });
-
-  // Use map to store
-  // Lower case as key, original case as value
-  var memberMap = new Map();
-  memberList.forEach(member => {
-    memberMap.set(member.toLowerCase(), member);
   });
   
   // Read regear chest player data
@@ -64,7 +60,7 @@ function regearChestCheck() {
     "#b6d7a8": "Healer",      // Green
     "#a4c2f4": "Tank",        // Blue
     "#b4a7d6": "Support",     // Purple
-    "#efefef": "Extra",       // White
+    "#f3f3f3": "Extra",       // White
     "#f9cb9c": "Mega BS",     // Orange
     "#95fdff": "Boom BS",     // Cyan
     "#ffe599": "6oo BS",      // Yellow
@@ -84,7 +80,12 @@ function regearChestCheck() {
   // Helper function: Clean player names from suffixes
   function cleanPlayerName(playerName) {
     // Escape special characters for use in regex
-    var regexPattern = new RegExp(`\\s*(${Object.values(suffixes).map(suffix => suffix.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")).join("|")})`, "g");
+    // This pattern includes guild and info siffixes
+    var regexPattern = new RegExp(`\\s*(${Object.values(suffixes)
+      .map(suffix => suffix.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")).join("|")}|\\s*\\[[^\\]]+\\])`, "g");
+    // This pattern only includes info siffixes
+    /*var regexPattern = new RegExp(`\\s*(${Object.values(suffixes)
+      .map(suffix => suffix.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")).join("|")})`, "g");*/
 
     // Remove the suffixes if they exist
     return playerName.replace(regexPattern, "").trim();
@@ -92,7 +93,15 @@ function regearChestCheck() {
 
   // Helper function: Case-insensitive matching and name correction
   function getCorrectCaseName(playerName) {
-    return memberMap.get(playerName.toLowerCase()) || playerName;
+    var cleanedName = cleanPlayerName(playerName).toLowerCase();
+    var memberInfo = memberMap.get(cleanedName);
+    if (memberInfo) {
+      if (memberInfo.guild !== "MC") {
+        return `${memberInfo.originalName} [${memberInfo.guild}]`;
+      }
+      return memberInfo.originalName;
+    }
+    return playerName;
   }
 
   // Helper function: Fuzzy color matching with roleColorMap colors
@@ -197,11 +206,11 @@ function regearChestCheck() {
         }
 
         // Check if the players is in the member list. If not, append " (Left)"
-        if (playerName && !memberList.has(playerName)) {
+        if (playerName.trim() !== "" && !memberMap.has(cleanPlayerName(playerName).toLowerCase())) {
           msgLogger(`Cell ${getCellName(row, col)} player "${playerName}" left guild.`);
           playerName += suffixes.suffixLeftGuild;
         }
-        if (nextPlayerName && !memberList.has(nextPlayerName)) {
+        if (nextPlayerName && nextPlayerName.trim() !== "" && !memberMap.has(cleanPlayerName(nextPlayerName).toLowerCase())) {
           msgLogger(`Cell ${getCellName(row, col + 1)} player "${nextPlayerName}" left guild.`);
           nextPlayerName += suffixes.suffixLeftGuild;
         }
