@@ -5,7 +5,7 @@
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
 // Update Date: 2025/04/02
-// Version: v4.0
+// Version: v4.1
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
