@@ -134,7 +134,7 @@ function memberListCheck() {
     var mark = row[markIndex - 1];
     if (playerName) {
       // If force marked as not guild member
-      if (currentGuildStatus !== inGuildNo && mark === forceMarkNotInGuild) {
+      if (mark === forceMarkNotInGuild) {
         updatesGuild.push([inGuildNo]);
         updatesComment.push([`${commentDate} forced mark as not in guild.`]);
         msgLogger(`"${playerName}" forced mark as not in guild, updated in-guild status to "${inGuildNo}".`);
