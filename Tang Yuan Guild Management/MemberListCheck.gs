@@ -1,11 +1,11 @@
 /*----- ----- ----- -----*/
 // MemberListCheck.gs
-// For Albion Online "Tang Yuan" Guild only
+// For Albion Online "Malicious Crew" Guild only
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
 // Update Date: 2025/04/02
-// Version: v4.1
+// Version: v4.2
 /*----- ----- ----- -----*/
 
 function memberListCheck() {
@@ -174,6 +174,7 @@ function memberListCheck() {
       sheet.getRange(lastYesRow + 1, playerIndex).setValue(newName);
       sheet.getRange(lastYesRow + 1, guildIndex).setValue(guildMembers.get(newName));
       sheet.getRange(lastYesRow + 1, commentIndex).setValue(`${commentDate} new ${guildMembers.get(newName)} guild player added by bot.`);
+      msgLogger(`"${guildMembers.get(newName)} guild new player "${newName}" added by bot.`);
 
       // Copy formula from previous row and apply to new row in "Fight Role"
       var prevFormula = sheet.getRange(lastYesRow, inFightRoleIndex).getFormula();
