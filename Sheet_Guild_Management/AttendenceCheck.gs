@@ -5,19 +5,26 @@
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
 // Update Date: 2025/04/16
-// Version: v4.2
+// Version: v4.3
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
+  // Helper Function: Automatically select the sheet (prefer "Copy of ..." if available)
+  function getTargetSheet(sheetBaseName) {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = spreadsheet.getSheets();
+    const copySheet = sheets.find(sheet => sheet.getName().includes(`Copy of ${sheetBaseName}`));
+    return copySheet || spreadsheet.getSheetByName(sheetBaseName);
+  }
+
   // Variables for user
   const sheetName = "Master";
-  //const sheetName = "Copy of Master";
   const forceMarkNotInGuild = "Not guild member (Force mark)";
   const inGuildYes = new Set(["MC", "TY"]);
   const inGuildNo = "❌";
   const attendanceNoData = "No data";
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = getTargetSheet(sheetName);
   if (!sheet) {
     msgLogger(`Sheet "${sheetName}" not found.`, "e");
     return;
