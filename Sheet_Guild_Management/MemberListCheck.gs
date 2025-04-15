@@ -5,20 +5,28 @@
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
 // Update Date: 2025/04/16
-// Version: v4.4
+// Version: v4.5
 /*----- ----- ----- -----*/
 
 function memberListCheck() {
+  // Helper Function: Automatically select the sheet (prefer "Copy of ..." if available)
+  function getTargetSheet(sheetBaseName) {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = spreadsheet.getSheets();
+    const copySheet = sheets.find(sheet => sheet.getName().includes(`Copy of ${sheetBaseName}`));
+    return copySheet || spreadsheet.getSheetByName(sheetBaseName);
+  }
+
   // Variables for user
   const sheetName = "Master";
-  //var sheetName = "Copy of Master";
   const forceMarkInGuild = "Guild member";
   const forceMarkNotInGuild = "Not guild member (Force mark)";
   const inGuildYes = ["MC", "TY"];
   const inGuildNo = "❌";
   const noDataString = "No data";
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  // Variables
+  const sheet = getTargetSheet(sheetName);
   if (!sheet) {
     msgLogger(`Sheet "${sheetName}" not found.`, "e");
     return;
