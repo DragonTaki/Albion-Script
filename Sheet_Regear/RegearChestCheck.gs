@@ -1,34 +1,42 @@
 /*----- ----- ----- -----*/
 // RegearChestCheck.gs
-// For Albion Online "Tang Yuan" Guild only
+// For Albion Online "Malicious Crew" Guild only
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/19
-// Update Date: 2025/03/29
-// Version: v2.0
+// Update Date: 2025/04/16
+// Version: v2.1
 /*----- ----- ----- -----*/
 
 function regearChestCheck() {
+  // Helper Function: Automatically select the sheet (prefer "Copy of ..." if available)
+  function getTargetSheet(sheetBaseName) {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = spreadsheet.getSheets();
+    const copySheet = sheets.find(sheet => sheet.getName().includes(`Copy of ${sheetBaseName}`));
+    return copySheet || spreadsheet.getSheetByName(sheetBaseName);
+  }
+
   // Variables for user
-  var sheetName = "FS ISLAND";
-  //var sheetName = "Copy of FS ISLAND";
-  var inGuildYes = ["MC", "TY"];
-  var inGuildNo = "❌";
+  const sheetName = "HO";
+  //var sheetName = "FS ISLAND";
+  const inGuildYes = ["MC", "TY"];
+  const inGuildNo = "❌";
 
   // Member List Variables
-  var sheetIdMemberList = "1KsGoAs1y-Yu8EvefVExg5XDTXOS2ngwl88eYu0m4NjQ";
-  var sheetNameMemberList = "Master";
+  const sheetIdMemberList = "1KsGoAs1y-Yu8EvefVExg5XDTXOS2ngwl88eYu0m4NjQ";
+  const sheetNameMemberList = "Master";
   
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  const sheet = getTargetSheet(sheetName);
   if (!sheet) {
     msgLogger(`Sheet "${sheetName}" not found.`, "e");
     return;
   }
 
-  var lastCol = sheet.getLastColumn();
-  var lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  const lastRow = sheet.getLastRow();
 
-  var sheetMemberList = SpreadsheetApp.openById(sheetIdMemberList).getSheetByName(sheetNameMemberList);
+  const sheetMemberList = SpreadsheetApp.openById(sheetIdMemberList).getSheetByName(sheetNameMemberList);
   if (!sheetMemberList) {
     msgLogger(`Sheet "${sheetNameMemberList}" not found in the target spreadsheet: "${sheetIdMemberList}".`, "e");
     return;
@@ -36,13 +44,13 @@ function regearChestCheck() {
   msgLogger(`Successfully load required sheet "${sheetNameMemberList}" in spreadsheet "${sheetIdMemberList}".`);
   
   // Read member list
-  var dataMemberList = sheetMemberList.getRange("A2:B").getValues();
-  var memberMap = new Map();
+  const dataMemberList = sheetMemberList.getRange("A2:B").getValues();
+  const memberMap = new Map();
   
   // Only include players in guild
   dataMemberList.forEach(row => {
-    var playerName = row[0]?.trim();
-    var guildName = row[1]?.trim();
+    const playerName = row[0]?.trim();
+    const guildName = row[1]?.trim();
     
     if (playerName && guildName && guildName !== inGuildNo) {
       memberMap.set(playerName.toLowerCase(), { originalName: playerName, guild: guildName });
@@ -50,12 +58,12 @@ function regearChestCheck() {
   });
   
   // Read regear chest player data
-  var dataRange = sheet.getDataRange();
-  var data = dataRange.getValues();
-  var colors = dataRange.getBackgrounds();
+  const dataRange = sheet.getDataRange();
+  const data = dataRange.getValues();
+  const colors = dataRange.getBackgrounds();
 
   // *Only use lowercase color code only*
-  var roleColorMap = {
+  const roleColorMap = {
     "#ea9999": "DPS",         // Red
     "#b6d7a8": "Healer",      // Green
     "#a4c2f4": "Tank",        // Blue
@@ -71,7 +79,7 @@ function regearChestCheck() {
   };
 
   // Suffixes
-  var suffixes = {
+  const suffixes = {
     suffixLeftGuild:    " (Left)",        // Player left the guild
     suffixSortErrorTop: " (ShouldAtBot)", // Player should be at the bottom
     suffixSortErrorBot: " (ShouldAtTop)"  // Player should be at the top
@@ -81,7 +89,7 @@ function regearChestCheck() {
   function cleanPlayerName(playerName) {
     // Escape special characters for use in regex
     // This pattern includes guild and info siffixes
-    var regexPattern = new RegExp(`\\s*(${Object.values(suffixes)
+    const regexPattern = new RegExp(`\\s*(${Object.values(suffixes)
       .map(suffix => suffix.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1")).join("|")}|\\s*\\[[^\\]]+\\])`, "g");
     // This pattern only includes info siffixes
     /*var regexPattern = new RegExp(`\\s*(${Object.values(suffixes)
@@ -93,8 +101,8 @@ function regearChestCheck() {
 
   // Helper function: Case-insensitive matching and name correction
   function getCorrectCaseName(playerName) {
-    var cleanedName = cleanPlayerName(playerName).toLowerCase();
-    var memberInfo = memberMap.get(cleanedName);
+    const cleanedName = cleanPlayerName(playerName).toLowerCase();
+    const memberInfo = memberMap.get(cleanedName);
     if (memberInfo) {
       if (memberInfo.guild !== "MC") {
         return `${memberInfo.originalName} [${memberInfo.guild}]`;
@@ -106,8 +114,8 @@ function regearChestCheck() {
 
   // Helper function: Fuzzy color matching with roleColorMap colors
   function isColorMatch(color, cellPosition = null) {
-    var tolerance = 20;
-    var cellName = (cellPosition && cellPosition.row !== undefined && cellPosition.col !== undefined) 
+    const tolerance = 20;
+    const cellName = (cellPosition && cellPosition.row !== undefined && cellPosition.col !== undefined) 
                   ? `${getCellName(cellPosition.row, cellPosition.col)}` : null;
     // If the color is invalid (undefined or empty), return false
     if (!color || typeof color !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
@@ -120,17 +128,17 @@ function regearChestCheck() {
 
     // Convert hex color to RGB
     function hexToRgb(hex) {
-      var r = parseInt(hex.slice(1, 3), 16);
-      var g = parseInt(hex.slice(3, 5), 16);
-      var b = parseInt(hex.slice(5, 7), 16);
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
       return { r, g, b };
     }
     
-    var colorRgb = hexToRgb(color);
-    for (var roleColor in roleColorMap) {
-      var roleColorRgb = hexToRgb(roleColor);
+    const colorRgb = hexToRgb(color);
+    for (const roleColor in roleColorMap) {
+      const roleColorRgb = hexToRgb(roleColor);
       // Calculate color difference
-      var diff = Math.abs(colorRgb.r - roleColorRgb.r) + Math.abs(colorRgb.g - roleColorRgb.g) + Math.abs(colorRgb.b - roleColorRgb.b);
+      const diff = Math.abs(colorRgb.r - roleColorRgb.r) + Math.abs(colorRgb.g - roleColorRgb.g) + Math.abs(colorRgb.b - roleColorRgb.b);
       if (diff <= tolerance) {
         msgLogger(`Fuzzy color matched: ${cellName ? `Cell ${cellName}` : `Unknown cell`} "${color}" with role color ${roleColor}.`);
         return true; // Matched with one of the role colors
@@ -141,19 +149,19 @@ function regearChestCheck() {
   }
 
   // Step 1: Check player list area
-  var pairTop = "TOP";
-  var pairBot = "BOTTOM";
-  var topBottomPairs = [];
-  var numberAreas = new Set();
-  var playerRows = new Set();
+  const pairTop = "TOP";
+  const pairBot = "BOTTOM";
+  const topBottomPairs = [];
+  const numberAreas = new Set();
+  const playerRows = new Set();
 
-  for (var row = 0; row < data.length; row++) {
-    for (var col = 0; col < data[row].length - 1; col++) {
-      var cellValue = data[row][col]?.trim();
-      var rightCellValue = data[row][col + 1]?.trim();
+  for (let row = 0; row < data.length; row++) {
+    for (let col = 0; col < data[row].length - 1; col++) {
+      const cellValue = data[row][col]?.trim();
+      const rightCellValue = data[row][col + 1]?.trim();
 
       if (cellValue === pairTop && rightCellValue === pairBot) {
-      var bottomRow = row;
+      let bottomRow = row;
       while (++bottomRow < data.length && !data[bottomRow][col]?.trim());
       topBottomPairs.push({ start: row, end: bottomRow, col: col });
       }
@@ -164,7 +172,7 @@ function regearChestCheck() {
     }
   }
   topBottomPairs.forEach(({ start, end }) => {
-    for (var row = start + 1; row < end; row++) { 
+    for (let row = start + 1; row < end; row++) { 
       if (numberAreas.has(row)) {
         playerRows.add(row);
       }
@@ -172,7 +180,7 @@ function regearChestCheck() {
   });
 
   numberAreas.forEach(row => {
-    var isInsideAnyPair = topBottomPairs.some(({ start, end }) => row > start && row < end);
+    const isInsideAnyPair = topBottomPairs.some(({ start, end }) => row > start && row < end);
     if (!isInsideAnyPair) {
       playerRows.add(row);
     }
@@ -181,11 +189,11 @@ function regearChestCheck() {
   msgLogger(`Detected ${topBottomPairs.length} regear houses (TOP-BOTTOM pairs) with ${playerRows.size} chests, and total length is ${numberAreas.size}.`);
 
   // Step 2: Check player names
-  for (var row of playerRows) {
-    for (var col = 0; col < data[row].length; col++) {
-      var cellColor = colors[row][col] ? colors[row][col].toLowerCase() : null;
-      var nextCellColor = colors[row][col + 1] ? colors[row][col + 1].toLowerCase() : null;
-      var playerName = data[row][col]?.trim();
+  for (const row of playerRows) {
+    for (let col = 0; col < data[row].length; col++) {
+      const cellColor = colors[row][col] ? colors[row][col].toLowerCase() : null;
+      const nextCellColor = colors[row][col + 1] ? colors[row][col + 1].toLowerCase() : null;
+      let playerName = data[row][col]?.trim();
 
       if (roleColorMap[cellColor] || (roleColorMap[cellColor] === undefined && isColorMatch(cellColor, { row: row, col: col }))) {
         if (!(roleColorMap[nextCellColor] || (roleColorMap[nextCellColor] === undefined && isColorMatch(nextCellColor, { row: row, col: col + 1 })))) {
@@ -194,7 +202,7 @@ function regearChestCheck() {
 
         // Clean the player name suffixes before processing
         playerName = cleanPlayerName(playerName);
-        var nextPlayerName = col + 1 < data[row].length ? cleanPlayerName(data[row][col + 1]?.trim()) : null; // Next player name
+        let nextPlayerName = col + 1 < data[row].length ? cleanPlayerName(data[row][col + 1]?.trim()) : null; // Next player name
         if (nextPlayerName) {
           nextPlayerName = cleanPlayerName(nextPlayerName);
         }
@@ -244,13 +252,13 @@ function regearChestCheck() {
   dataRange.setValues(data);
 
   // Save updated timestamp
-  var searchText = "Last member check";
-  var values = sheet.getDataRange().getValues().flat();
-  var index = values.findIndex(text => typeof text === "string" && text.startsWith(searchText + ":"));
+  const searchText = "Last member check";
+  const values = sheet.getDataRange().getValues().flat();
+  const index = values.findIndex(text => typeof text === "string" && text.startsWith(searchText + ":"));
   
   if (index !== -1) {
-    var rowIndex = Math.floor(index / lastCol) + 1;
-    var colIndex = (index % lastCol) + 2;
+    const rowIndex = Math.floor(index / lastCol) + 1;
+    const colIndex = (index % lastCol) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
     msgLogger(`"${searchText}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
@@ -269,11 +277,11 @@ function regearChestCheck() {
  * @param {string} [level] - The severity level.
  */
 function msgLogger(message, level) {
-  var now = new Date();
-  var timeZone = Session.getScriptTimeZone();
-  var timestamp = Utilities.formatDate(now, timeZone, "yyyy/MM/dd HH:mm:ss");
+  const now = new Date();
+  const timeZone = Session.getScriptTimeZone();
+  const timestamp = Utilities.formatDate(now, timeZone, "yyyy/MM/dd HH:mm:ss");
 
-  var prefix = "Info";
+  let prefix = "Info";
   if (level === "e") {
     prefix = "Error";
   } else if (level === "w") {
@@ -289,10 +297,10 @@ function msgLogger(message, level) {
  * @returns {string} The corresponding column letter.
  */
 function columnIndexToLetter(column) {
-  var letter = "";
+  let letter = "";
   column++;
   while (column > 0) {
-    var mod = (column - 1) % 26; // Get remainder (0-based index)
+    const mod = (column - 1) % 26; // Get remainder (0-based index)
     letter = String.fromCharCode(65 + mod) + letter; // Convert to ASCII letter
     column = Math.floor((column - 1) / 26); // Move to the next place value
   }
