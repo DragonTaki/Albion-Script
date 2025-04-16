@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/07
-// Update Date: 2025/04/16
-// Version: v4.3
+// Update Date: 2025/04/17
+// Version: v5.0
 /*----- ----- ----- -----*/
 
 function attendanceCheck() {
@@ -18,41 +18,56 @@ function attendanceCheck() {
   }
 
   // Variables for user
-  const sheetName = "Master";
-  const forceMarkNotInGuild = "Not guild member (Force mark)";
-  const inGuildYes = new Set(["MC", "TY"]);
-  const inGuildNo = "❌";
-  const attendanceNoData = "No data";
+  const SHEET_NAME = "Master";
+  const FORCE_MARK_IN_GUILD = "Guild member";
+  const FORCE_MARK_NOT_IN_GUILD = "Not guild member (Force mark)";
+  const GUILD_TAGS = ["MC", "TY"];
+  const NOT_IN_GUILD_MARK = "❌";
+  const NO_DATA_STRING = "No data";
 
-  const sheet = getTargetSheet(sheetName);
+  // Variables
+  const sheet = getTargetSheet(SHEET_NAME);
   if (!sheet) {
-    msgLogger(`Sheet "${sheetName}" not found.`, "e");
+    msgLogger(`Sheet "${SHEET_NAME}" not found.`, "e");
     return;
   }
-  let lastCol = sheet.getLastColumn();
+  const lastColumn = sheet.getLastColumn();
   let lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {
-    msgLogger(`Sheet "${sheetName}" doesn't have enough rows (need >= 2).`, "e");
+    msgLogger(`Sheet "${SHEET_NAME}" doesn't have enough rows (need >= 2).`, "e");
     return;
   }
+
+  // Read headers
+  const headerRow = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
   
-  // Get column indexes based on column titles
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const columnNames = ["Player", "Guild", "Past 7 Days", "Past 14 Days", "Past 28 Days", "Comment", "Force Mark"];
-  const indexes = columnNames.map(name => headers.indexOf(name) + 1);
+  // Define expected column titles
+  const columnTitleMap = {
+    player: "Player",
+    guild: "Guild",
+    past7: "Past 7 Days",
+    past14: "Past 14 Days",
+    past28: "Past 28 Days",
+    comment: "Comment",
+    mark: "Force Mark"
+  };
+  let columns;
   
   // Check if any required column is missing
-  if (indexes.includes(0)) {
-    msgLogger(`Missing required columns: ${columnNames.filter((_, i) => indexes[i] === 0).join(", ")}.`, "e");
+  try {
+    columns = getColumnIndexes(headerRow, columnTitleMap);
+  } catch (error) {
     return;
   }
-  
-  // Extract individual column indexes
-  const [playerIndex, inGuildIndex, past7Index, past14Index, past28Index, commentIndex, markIndex] = indexes;
+
+  // Wrap columns to auto -1 when accessing by Proxy
+  const columns_ = new Proxy(columns, {
+    get: (target, prop) => target[prop] - 1
+  });
   
   // Read existing data in one go to minimize getRange calls
-  const dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  let dataRange = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
 
   // Variables for fetch
   const guildName = ["Malicious Crew", "Tang Yuan"];
@@ -97,38 +112,38 @@ function attendanceCheck() {
   const results7Days = [], results14Days = [], results28Days = [];
   
   dataRange.forEach((row, i) => {
-    const playerName = row[playerIndex - 1];
-    let playerStatus = row[inGuildIndex - 1];
-    const mark = row[markIndex - 1];
+    const playerName = row[columns_.player];
+    let currentGuildStatus = row[columns_.guild];
+    const currentMark = row[columns_.mark];
     if (!playerName) return;
     
-    if (mark === forceMarkNotInGuild) {
-      row[inGuildIndex - 1] = inGuildNo;
-      playerStatus = inGuildNo;
+    if (currentMark === FORCE_MARK_NOT_IN_GUILD) {
+      row[columns_.guild] = NOT_IN_GUILD_MARK;
+      currentGuildStatus = NOT_IN_GUILD_MARK;
     }
 
-    results7Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[7]?.get(playerName) || 0);
-    results14Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[14]?.get(playerName) || 0);
-    results28Days[i] = playerStatus === inGuildNo ? attendanceNoData : (fetchedData[28]?.get(playerName) || 0);
+    results7Days[i] = currentGuildStatus === NOT_IN_GUILD_MARK ? NO_DATA_STRING : (fetchedData[7]?.get(playerName) || 0);
+    results14Days[i] = currentGuildStatus === NOT_IN_GUILD_MARK ? NO_DATA_STRING : (fetchedData[14]?.get(playerName) || 0);
+    results28Days[i] = currentGuildStatus === NOT_IN_GUILD_MARK ? NO_DATA_STRING : (fetchedData[28]?.get(playerName) || 0);
   });
 
   // Step 2: Batch update attendance data
-  sheet.getRange(2, past7Index, lastRow - 1).setValues(results7Days.map(v => [v]));
-  sheet.getRange(2, past14Index, lastRow - 1).setValues(results14Days.map(v => [v]));
-  sheet.getRange(2, past28Index, lastRow - 1).setValues(results28Days.map(v => [v]));
+  sheet.getRange(2, columns.past7, lastRow - 1).setValues(results7Days.map(v => [v]));
+  sheet.getRange(2, columns.past14, lastRow - 1).setValues(results14Days.map(v => [v]));
+  sheet.getRange(2, columns.past28, lastRow - 1).setValues(results28Days.map(v => [v]));
   
   // Update timestamp
-  const searchText = "Attendance Updated";
+  const SEARCH_TEXT = "Attendance Updated";
   const values = sheet.getDataRange().getValues().flat();
-  const index = values.findIndex(text => typeof text === "string" && text.startsWith(searchText + ":"));
+  const index = values.findIndex(text => typeof text === "string" && text.startsWith(SEARCH_TEXT + ":"));
   
   if (index !== -1) {
-    const rowIndex = Math.floor(index / lastCol) + 1;
-    const colIndex = (index % lastCol) + 2;
+    const rowIndex = Math.floor(index / lastColumn) + 1;
+    const colIndex = (index % lastColumn) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
-    msgLogger(`"${searchText}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
+    msgLogger(`"${SEARCH_TEXT}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
-    msgLogger(`"${searchText}" not found in sheet.`, "e");
+    msgLogger(`"${SEARCH_TEXT}" not found in sheet.`, "e");
   }
   
   msgLogger(`Attendance data updated!`);
@@ -155,4 +170,33 @@ function msgLogger(message, level) {
   }
 
   Logger.log(`${timestamp} [${prefix}] ${message}`);
+}
+
+/**
+ * Get indexes of specified column headers
+ * @param {string[]} headers - The header row of the sheet
+ * @param {Object} nameMap - Mapping of logical names to column titles
+ * @returns {Object} - Object with logical names and their 1-based column indexes
+ * @throws {Error} - Throws if required column headers are missing
+ */
+function getColumnIndexes(headers, nameMap) {
+  const indexes = {};
+  const missing = [];
+
+  for (const key in nameMap) {
+    const title = nameMap[key];
+    const idx = headers.indexOf(title);
+    if (idx === -1) {
+      missing.push(title);
+    } else {
+      indexes[key] = idx + 1; // Convert 0-based to 1-based index
+    }
+  }
+
+  if (missing.length > 0) {
+    msgLogger(`Missing required columns: ${missing.join(", ")}`, "e");
+    throw new Error(`Missing required columns.`);
+  }
+
+  return indexes;
 }
