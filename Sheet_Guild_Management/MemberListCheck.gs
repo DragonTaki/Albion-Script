@@ -275,17 +275,17 @@ function memberListCheck() {
   }
 
   // Save updated timestamp
-  const searchText = "Player List Updated";
+  const SEARCH_TEXT = "Player List Updated";
   const values = sheet.getDataRange().getValues().flat();
-  const index = values.findIndex(text => typeof text === "string" && text.startsWith(searchText + ":"));
+  const index = values.findIndex(text => typeof text === "string" && text.startsWith(SEARCH_TEXT + ":"));
   
   if (index !== -1) {
     const rowIndex = Math.floor(index / lastColumn) + 1;
     const colIndex = (index % lastColumn) + 2;
     sheet.getRange(rowIndex, colIndex).setValue(Utilities.formatDate(new Date(), "UTC", "dd/MM/yyyy HH:mm"));
-    msgLogger(`"${searchText}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
+    msgLogger(`"${SEARCH_TEXT}" timestamp saved at row ${rowIndex}, col ${colIndex}.`);
   } else {
-    msgLogger(`"${searchText}" not found in sheet.`, "e");
+    msgLogger(`"${SEARCH_TEXT}" not found in sheet.`, "e");
   }
 
   msgLogger(`Member list updated!`);
