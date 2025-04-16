@@ -1,7 +1,6 @@
 # 🛡️ Malicious Crew | Albion Online Guild
 
 [![Recruit Now](https://img.shields.io/badge/Recruit%20Now-5865F2?logo=discord&logoColor=white&style=flat-square)](https://discord.com/invite/9dNKCMj9G5)
-(https://discord.com/invite/9dNKCMj9G5)
 [![Killboard - Malicious Crew](https://img.shields.io/badge/Killboard-MC-red?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/59YXPiViQdWXaARvPNyvMA)
 [![Killboard - Tang Yuan](https://img.shields.io/badge/Killboard-TY-orange?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/k0TF-1dGQLSBmWqusGHBHQ)
 [![Killboard - MC Holdings](https://img.shields.io/badge/Killboard-MCH-yellow?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/Pem3HYHsTm-2L68uAaLDVg)
