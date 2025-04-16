@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/12
-// Update Date: 2025/04/16
-// Version: v2.0
+// Update Date: 2025/04/17
+// Version: v2.1
 /*----- ----- ----- -----*/
 
 function increase10() {
@@ -34,7 +34,7 @@ function decrease12() {
 
 function adjustValue(rowNumber, change) {
   // Variables for user
-  const attendanceText = "--- Attendance Marked Below ---";
+  const ATTENDANCE_TEXT = "--- Attendance Marked Below ---";
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const dataRange = sheet.getDataRange();
@@ -45,7 +45,7 @@ function adjustValue(rowNumber, change) {
     for (let c = 0; c < values[r].length; c++) {
       if (
         typeof values[r][c] === "string" &&
-        values[r][c].trim().toLowerCase() === attendanceText.toLowerCase()
+        values[r][c].trim().toLowerCase() === ATTENDANCE_TEXT.toLowerCase()
       ) {
         markerColumnIndex = c;
         break;
@@ -54,7 +54,7 @@ function adjustValue(rowNumber, change) {
     if (markerColumnIndex !== -1) break;
   }
   if (markerColumnIndex === -1) {
-    msgLogger(`"${attendanceText}" not found in sheet.`, "e");
+    msgLogger(`"${ATTENDANCE_TEXT}" not found in sheet.`, "e");
     return;
   }
   
