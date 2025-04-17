@@ -1,0 +1,15 @@
+
+# Auto-appended patterns
+*.bmp
+*.cache
+*.jpeg
+*.jpg
+*.log
+*.png
+*.py[cod]
+*.pyo
+.DS_Store
+.vscode/
+Thumbs.db
+__pycache__/
+attendance_data_*.csv
