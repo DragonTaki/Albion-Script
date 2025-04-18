@@ -16,7 +16,7 @@ from tkinter import font
 from botcore.fetch_attendance import fetch_attendance
 from botcore.fetch_guild_members import fetch_guild_members
 from botcore.generate_report import prepare_report_data, write_csv
-from botcore.cache import load_from_cache, save_to_cache, clear_all_cache_files  # Updated
+from botcore.cache import load_from_cache, save_to_cache, clear_all_cache_files
 from botcore.logger import log, set_external_logger, log_welcome_message
 from botcore.screenshot_ocr import parse_screenshots
 
@@ -182,8 +182,7 @@ class AttendanceBotGUI(tk.Tk):
     def fetch_and_generate_report(self):
         log("Fetching data and generating report...")
         try:
-            data = fetch_attendance()
-            report = prepare_report_data(data)
+            report = prepare_report_data()
             write_csv(report)
             log("Report generated.")
         except Exception as e:
@@ -192,13 +191,9 @@ class AttendanceBotGUI(tk.Tk):
     def load_from_cache_and_generate_report(self):
         log("Loading data from cache...")
         try:
-            cached_data = load_from_cache(CACHE_TYPE_ATTENDANCE)
-            if cached_data:
-                report = prepare_report_data(cached_data)
-                write_csv(report)
-                log("Report generated from cache.")
-            else:
-                log("No valid cache found.", "w")
+            report = prepare_report_data()
+            write_csv(report)
+            log("Report generated from cache.")
         except Exception as e:
             log(f"Failed to generate report from cache: {e}", "e")
 

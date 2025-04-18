@@ -9,7 +9,8 @@
 # ----- ----- ----- -----
 
 import requests
-from .config import GUILD_INFO_LIST
+
+from .config import CacheType, GUILD_INFO_LIST
 from .cache import save_to_cache
 from .logger import log
 
@@ -54,7 +55,7 @@ def fetch_guild_members(if_save_to_cache=True):
     if if_save_to_cache:
         if result_map:
             cache_data = {
-                "type": "players",
+                "type": CacheType.PLAYERS.value,
                 "json_data": result_map
             }
             save_to_cache(cache_data)

@@ -9,7 +9,8 @@
 # ----- ----- ----- -----
 
 import requests
-from .config import GUILD_INFO_LIST, INTERVALS
+
+from .config import CacheType, GUILD_INFO_LIST, INTERVALS
 from .cache import save_to_cache
 from .logger import log
 
@@ -45,7 +46,7 @@ def fetch_attendance(if_save_to_cache=True):
     if if_save_to_cache:
         if fetched_data:
             cache_data = {
-                "type": "attendance",
+                "type": CacheType.ATTENDANCE.value,
                 "json_data": fetched_data
             }
             save_to_cache(cache_data)
