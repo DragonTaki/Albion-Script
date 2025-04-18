@@ -27,7 +27,7 @@ fi
 # Stage all files and commit
 echo "📦 Staging all files and committing..."
 git add .
-git commit -m "✅ First valid commit from correct project root"
+git commit -m "Commit from Git Bash"
 
 # Force push to remote 'main' branch
 echo "🚀 Pushing to GitHub (force push)..."

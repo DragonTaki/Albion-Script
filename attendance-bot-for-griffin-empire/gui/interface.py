@@ -8,14 +8,13 @@
 # Version: v1.0
 # ----- ----- ----- -----
 
+import json
 import tkinter as tk
 from tkinter import font
-import os
-from datetime import datetime
-import json
 
 # Modular imports
-from botcore.fetch_attendance import fetch_attendance_data
+from botcore.fetch_attendance import fetch_attendance
+from botcore.fetch_guild_members import fetch_guild_members
 from botcore.report import prepare_report_data, write_csv
 from botcore.cache import load_from_cache, save_to_cache, clear_all_cache_files  # Updated
 from botcore.logger import log, set_external_logger, log_welcome_message
@@ -27,7 +26,6 @@ BTN_BG_COLOR = "#5C5C5C"
 BTN_FG_COLOR = "white"
 LOGGER_BG_COLOR = "#333333"
 LOGGER_FG_COLOR = "white"
-TIMESTAMP_FORMAT = "%Y/%m/%d %H:%M:%S"
 
 # Define cache type constants
 CACHE_TYPE_ATTENDANCE = "attendance"
@@ -66,14 +64,19 @@ class AttendanceBotGUI(tk.Tk):
 
         self.buttons_config = [
             {
-                "label": "Fetch attendance\nTHAN\nStored as cache",
-                "command": self.fetch_and_cache,
+                "label": "Fetch member list\n(Save as cache)",
+                "command": self.fetch_member_list_and_cache,
                 "row": 0, "column": 0
             },
             {
-                "label": "Load extra attendance\nTHAN\nStored as cache",
-                "command": self.generate_ocr_attendance,
+                "label": "Fetch attendance\n(Save as cache)",
+                "command": self.fetch_attendance_and_cache,
                 "row": 0, "column": 1
+            },
+            {
+                "label": "Load extra attendance\n(Save as cache)",
+                "command": self.generate_ocr_attendance,
+                "row": 0, "column": 2
             },
             {
                 "label": "Fetch Attendance\nTHAN\nGenerate report directly\n(No need extra count attendance)",
@@ -88,8 +91,7 @@ class AttendanceBotGUI(tk.Tk):
             {
                 "label": "Clear Cache",
                 "command": self.clear_cache,
-                "row": 2, "column": 0,
-                "columnspan": 2
+                "row": 1, "column": 2
             }
         ]
 
@@ -159,26 +161,28 @@ class AttendanceBotGUI(tk.Tk):
 
         self.logger.config(width=logger_width // 10, height=logger_height // 15)
 
-    def fetch_and_cache(self):
-        log("Fetching data and saving to cache...")
+    def fetch_member_list_and_cache(self):
+        log("Fetching member list and saving to cache...")
         try:
-            data = fetch_attendance_data()
-            save_to_cache({
-                "type": CACHE_TYPE_ATTENDANCE,
-                "json_data": data
-            })
-            log("Data fetched and cached.")
+            data = fetch_guild_members()
+            if data:
+                log("Done. Data fetched and cached.")
+        except Exception as e:
+            log(f"Failed to fetch and cache: {e}", "e")
+
+    def fetch_attendance_and_cache(self):
+        log("Fetching attendance and saving to cache...")
+        try:
+            data = fetch_attendance()
+            if data:
+                log("Done. Data fetched and cached.")
         except Exception as e:
             log(f"Failed to fetch and cache: {e}", "e")
 
     def fetch_and_generate_report(self):
         log("Fetching data and generating report...")
         try:
-            data = fetch_attendance_data()
-            save_to_cache({
-                "type": CACHE_TYPE_ATTENDANCE,
-                "json_data": data
-            })
+            data = fetch_attendance()
             report = prepare_report_data(data)
             write_csv(report)
             log("Report generated.")

@@ -9,19 +9,26 @@
 # ----- ----- ----- -----
 
 import requests
-from .config import GUILD_NAME, INTERVALS, MIN_GP
-from .cache import save_to_cache  # 🔴 Updated to use new structured cache system
+from .config import GUILD_INFO_LIST, INTERVALS
+from .cache import save_to_cache
 from .logger import log
 
-def fetch_attendance_data():
+# API constants
+MIN_GP = 50
+API_BASE_URL = "https://api-east.albionbattles.com/player"
+API_ENDPOINT_TEMPLATE = f"{API_BASE_URL}?guildSearch={{guild_name}}&interval={{interval}}&minGP={MIN_GP}"
+HEADERS = {"Accept": "application/json, text/plain, */*"}
+
+def fetch_attendance(if_save_to_cache=True):
     fetched_data = {interval: {} for interval in INTERVALS}
     for interval in INTERVALS:
-        for guild in GUILD_NAME:
-            url = f"https://api-east.albionbattles.com/player?guildSearch={guild}&interval={interval}&minGP={MIN_GP}"
+        for guild in GUILD_INFO_LIST:
+            guild_name = guild.get("name")
+            url = API_ENDPOINT_TEMPLATE.format(guild_name=guild_name, interval=interval)
             try:
-                response = requests.get(url)
+                response = requests.get(url, headers=HEADERS)
                 if response.status_code != 200:
-                    log(f"Failed to fetch data for {guild} at {interval}d. HTTP {response.status_code}", "w")
+                    log(f"Failed to fetch data for {guild_name} at {interval}d. HTTP {response.status_code}.", "w")
                     continue
                 data = response.json()
                 if isinstance(data, list):
@@ -31,12 +38,18 @@ def fetch_attendance_data():
                             num = player["battleNumber"]
                             fetched_data[interval][name] = fetched_data[interval].get(name, 0) + num
             except Exception as e:
-                log(f"Exception occurred while fetching data: {e}", "e")
+                log(f"Exception occurred while fetching data: {e}.", "e")
                 continue
 
-    # 🔴 Wrap in dict with type before saving
-    save_to_cache({
-        "type": "attendance",  # 🔴 new required type field
-        "json_data": fetched_data
-    })
+    # Save to cache
+    if if_save_to_cache:
+        if fetched_data:
+            cache_data = {
+                "type": "attendance",
+                "json_data": fetched_data
+            }
+            save_to_cache(cache_data)
+            log(f"Attendance saved to cache.")
+            
+
     return fetched_data

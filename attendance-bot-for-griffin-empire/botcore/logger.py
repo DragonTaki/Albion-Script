@@ -11,9 +11,11 @@
 from datetime import datetime
 import json
 
+from .config import TIMESTAMP_FORMAT
+
 external_logger = None  # GUI logger callback
 
-# 🔴 Default color mapping
+# Default color mapping
 LEVEL_COLOR_MAP = {
     "info": "white",
     "warn": "yellow",
@@ -24,6 +26,7 @@ def set_external_logger(callback_fn):
     global external_logger
     external_logger = callback_fn
 
+# Main function to log messages
 def log(message, level=""):
     level_str = "info"
     if level == "w":
@@ -31,7 +34,7 @@ def log(message, level=""):
     elif level == "e":
         level_str = "error"
 
-    timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
     prefix = level_str.capitalize()
     full_text = f"{timestamp} [{prefix}] {message}"
     print(full_text)  # Console
@@ -45,7 +48,6 @@ def log(message, level=""):
         external_logger(log_json)
 
 def log_welcome_message():
-    # 🔴 Define pastel rainbow colors
     pastel_rainbow_colors = [
         "#FFB3BA",  # soft red
         "#FFDFBA",  # soft orange
@@ -57,9 +59,7 @@ def log_welcome_message():
     ]
 
     welcome = "Welcome to use Griffin Empire Attendance Bot!"
-    author = "Author: DragonTaki - github.com/DragonTaki"
-
-    # 🔴 Combine all characters into one list with different styles
+    author = "Author: DragonTaki"
     rainbow_line = []
     for i, char in enumerate(welcome):
         rainbow_line.append({
@@ -69,9 +69,8 @@ def log_welcome_message():
             "tag": f"rainbow_{i}"
         })
 
-    # 🔴 Send the entire rainbow message and the author info in one call
     if external_logger:
-        external_logger(json.dumps(rainbow_line))  # Send as a list of styled chars
+        external_logger(json.dumps(rainbow_line))
         # Add the author info with special style
         external_logger(json.dumps([{
             "text": "\n" + author + "\n",

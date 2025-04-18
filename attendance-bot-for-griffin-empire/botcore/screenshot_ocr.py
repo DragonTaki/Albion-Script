@@ -5,46 +5,39 @@
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
 # Update Date: 2025/04/18
-# Version: v1.1  🔴
+# Version: v1.0
 # ----- ----- ----- -----
 
 import os
-from datetime import datetime, timedelta
-from PIL import Image
-import pytesseract
-from rapidfuzz import process
-from botcore.cache import load_from_cache, save_to_cache  # 🔴 use new cache API
-from botcore.logger import log  # 🔴 log errors
 import sys
+from datetime import datetime
 
-# Get base path for current mode (dev or bundled)
+import pytesseract
+from PIL import Image
+
+from .config import DATE_FORMAT, SCREENSHOT_FOLDER
+from .cache import save_to_cache
+from .logger import log
+
+# Constants for OCR
+DAYS_LOOKBACK = 28
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
+
+# Set up Tesseract OCR path
 if getattr(sys, 'frozen', False):
     BASE_PATH = sys._MEIPASS
 else:
     BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tesseract"))
 
-# 🔴 Set pytesseract's executable path
-pytesseract.pytesseract.tesseract_cmd = os.path.join(BASE_PATH, "tesseract.exe")
-# 🔴 Specify tesseract executable path relative to project directory
-TESSERACT_PATH = os.path.join(os.path.dirname(__file__), "..", "tesseract", "tesseract.exe")
-pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+# Specify tesseract executable and language data path
+TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "third-party", "tesseract")
+TESSERACT_EXEC = os.path.join(TESSERACT_DIR, "tesseract.exe")
+TESSDATA_DIR = os.path.join(TESSERACT_DIR, "tessdata")
 
-# 🔴 constants
-SCREENSHOT_FOLDER = "screenshot"
-DATE_FORMAT = "%d-%m-%Y"
-DAYS_LOOKBACK = 30
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_EXEC
+os.environ["TESSDATA_PREFIX"] = TESSDATA_DIR
 
-# 🔴 load known names from players cache
-def load_known_names():
-    data = load_from_cache("players")  # 🔴 specify type
-    return [entry["name"] for entry in data] if data else []
-
-# 🔴 fuzzy match helper
-def correct_name(raw_name, known_names, threshold=80):
-    match, score, _ = process.extractOne(raw_name, known_names)
-    return match if score >= threshold else raw_name
-
-# 🔴 extract text from image
+# OCR function: extract text from image
 def extract_text_from_image(image_path):
     try:
         image = Image.open(image_path)
@@ -53,11 +46,11 @@ def extract_text_from_image(image_path):
         log(f"Failed to OCR image: {image_path} => {e}", "e")
         return ""
 
-# 🔴 main OCR and parsing function
-def parse_screenshots():
-    known_names = load_known_names()
+# Main function to parse screenshots
+def parse_screenshots(if_save_to_cache=True):
     today = datetime.today()
     result_by_day = {}
+    success_days = 0
 
     for folder in os.listdir(SCREENSHOT_FOLDER):
         folder_path = os.path.join(SCREENSHOT_FOLDER, folder)
@@ -73,22 +66,32 @@ def parse_screenshots():
             continue
 
         daily_names = set()
+        has_valid_image = False
+
         for file in os.listdir(folder_path):
-            if not file.lower().endswith((".png", ".jpg", ".jpeg")):
+            if not file.lower().endswith(IMAGE_EXTENSIONS):
                 continue
             full_path = os.path.join(folder_path, file)
             raw_text = extract_text_from_image(full_path)
+            if not raw_text.strip():
+                continue
+            has_valid_image = True
             lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-            for line in lines:
-                corrected = correct_name(line, known_names)
-                daily_names.add(corrected)
+            daily_names.add(lines)
 
-        result_by_day[folder] = sorted(list(daily_names))
+        if has_valid_image:
+            result_by_day[folder] = sorted(list(daily_names))
+            success_days += 1
 
-    # 🔴 Save to structured binary cache
-    save_to_cache({
-        "type": "ocr",
-        "json_data": result_by_day
-    })
+    if if_save_to_cache:
+        if result_by_day:
+            cache_data = {
+                "type": "ocr",
+                "json_data": result_by_day
+            }
+            save_to_cache(cache_data)
+            log(f"OCR parsing done and saved to cache. {success_days} days processed.")
+        else:
+            log("OCR failed for all images. Nothing saved to cache.", "e")
 
     return result_by_day

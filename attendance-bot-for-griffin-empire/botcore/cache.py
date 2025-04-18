@@ -10,15 +10,16 @@
 
 import os
 import time
-import pickle
-import hashlib
-import json  # 🔴 Add for JSON serialization
 from datetime import datetime, timezone, timedelta
-from .config import CACHE_EXPIRY_HOURS
+
+import hashlib
+import json
+import pickle
+
+from .config import CACHE_EXPIRY_HOURS, CACHE_FOLDER
 from .logger import log
 
-# 🔴 Constants for cache
-CACHE_FOLDER = "cache"
+# Constants for cache
 CACHE_TYPES = ["players", "attendance", "ocr"]  # three cache types
 CACHE_FILE_EXT = ".cache"
 # 🔴 Generate random filename based on type
