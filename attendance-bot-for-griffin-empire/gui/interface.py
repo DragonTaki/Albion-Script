@@ -15,7 +15,7 @@ from tkinter import font
 # Modular imports
 from botcore.fetch_attendance import fetch_attendance
 from botcore.fetch_guild_members import fetch_guild_members
-from botcore.report import prepare_report_data, write_csv
+from botcore.generate_report import prepare_report_data, write_csv
 from botcore.cache import load_from_cache, save_to_cache, clear_all_cache_files  # Updated
 from botcore.logger import log, set_external_logger, log_welcome_message
 from botcore.screenshot_ocr import parse_screenshots

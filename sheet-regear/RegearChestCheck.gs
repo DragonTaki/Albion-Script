@@ -4,8 +4,8 @@
 // Do not distribute or modify
 // Author: DragonTaki (https://github.com/DragonTaki)
 // Create Date: 2025/03/19
-// Update Date: 2025/04/16
-// Version: v2.1
+// Update Date: 2025/04/18
+// Version: v2.2
 /*----- ----- ----- -----*/
 
 function regearChestCheck() {
@@ -144,7 +144,7 @@ function regearChestCheck() {
         return true; // Matched with one of the role colors
       }
     }
-    msgLogger(`Fuzzy color mismatched: ${cellName ? `Cell ${cellName}` : `Unknown cell`} "${color}" with role color ${roleColor}.`);
+    msgLogger(`Fuzzy color mismatched: ${cellName ? `Cell ${cellName}` : `Unknown cell`} "${color}".`, "w");
     return false; // No match
   }
 

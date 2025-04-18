@@ -77,7 +77,8 @@ def parse_screenshots(if_save_to_cache=True):
                 continue
             has_valid_image = True
             lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-            daily_names.add(lines)
+            for name in lines:
+                daily_names.add(name)
 
         if has_valid_image:
             result_by_day[folder] = sorted(list(daily_names))

@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# report.py
+# generate_report.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
