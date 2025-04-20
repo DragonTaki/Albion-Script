@@ -5,10 +5,11 @@
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
 # Update Date: 2025/04/18
-# Version: v1.0
+# Version: v1.1
 # ----- ----- ----- -----
 
 import json
+import threading
 import tkinter as tk
 from tkinter import font
 
@@ -29,6 +30,9 @@ LOGGER_FG_COLOR = "white"
 
 # Define cache type constants
 CACHE_TYPE_ATTENDANCE = "attendance"
+
+# Constants for buttons
+NUM_COLUMNS = 3
 
 MIN_BTN_W = 350
 MIN_BTN_H = 60
@@ -65,43 +69,37 @@ class AttendanceBotGUI(tk.Tk):
         self.buttons_config = [
             {
                 "label": "Fetch member list\n(Save as cache)",
-                "command": self.fetch_member_list_and_cache,
-                "row": 0, "column": 0
+                "command": lambda: self.run_with_thread(self.fetch_member_list_task),
             },
             {
                 "label": "Fetch attendance\n(Save as cache)",
-                "command": self.fetch_attendance_and_cache,
-                "row": 0, "column": 1
+                "command": lambda: self.run_with_thread(self.fetch_attendance_task),
             },
             {
                 "label": "Load extra attendance\n(Save as cache)",
-                "command": self.generate_ocr_attendance,
-                "row": 0, "column": 2
+                "command": lambda: self.run_with_thread(self.parse_ocr_task),
             },
             {
                 "label": "Fetch Attendance\nTHAN\nGenerate report directly\n(No need extra count attendance)",
-                "command": self.fetch_and_generate_report,
-                "row": 1, "column": 0
+                "command": lambda: self.run_with_thread(self.generate_report_task),
             },
             {
                 "label": "Generate report from cache",
-                "command": self.load_from_cache_and_generate_report,
-                "row": 1, "column": 1
+                "command": lambda: self.run_with_thread(self.generate_report_from_cache_task),
             },
             {
                 "label": "Clear Cache",
-                "command": self.clear_cache,
-                "row": 1, "column": 2
+                "command": lambda: self.run_with_thread(self.clear_cache_task),
             }
         ]
 
         self.buttons = []
-        for cfg in self.buttons_config:
+        for i, cfg in enumerate(self.buttons_config):
+            row = i // NUM_COLUMNS
+            column = i % NUM_COLUMNS
             btn = tk.Button(self.frame, text=cfg["label"], command=cfg["command"],
                             font=button_font, bg=BTN_BG_COLOR, fg=BTN_FG_COLOR, relief="raised")
-            columnspan = cfg.get("columnspan", 1)
-            btn.grid(row=cfg["row"], column=cfg["column"], columnspan=columnspan,
-                     padx=20, pady=20, sticky="nsew")
+            btn.grid(row=row, column=column, padx=20, pady=20, sticky="nsew")
             self.buttons.append(btn)
 
         self.logger = tk.Text(self.frame, height=10, width=70, wrap=tk.WORD,
@@ -161,7 +159,22 @@ class AttendanceBotGUI(tk.Tk):
 
         self.logger.config(width=logger_width // 10, height=logger_height // 15)
 
-    def fetch_member_list_and_cache(self):
+    # New: Generic runner for async tasks
+    def run_with_thread(self, task_func):
+        def wrapper():
+            try:
+                task_func()  # 🔸 Run task in background
+            finally:
+                self.set_all_buttons_state(tk.NORMAL)  # 🔸 Unlock all buttons after completion
+        self.set_all_buttons_state(tk.DISABLED)       # 🔸 Lock all buttons before starting
+        threading.Thread(target=wrapper, daemon=True).start()
+        
+    def set_all_buttons_state(self, state):
+        for btn in self.buttons:
+            btn.config(state=state)
+
+    # Task wrappers (no UI logic here)
+    def fetch_member_list_task(self):
         log("Fetching member list and saving to cache...")
         try:
             data = fetch_guild_members()
@@ -170,7 +183,7 @@ class AttendanceBotGUI(tk.Tk):
         except Exception as e:
             log(f"Failed to fetch and cache: {e}", "e")
 
-    def fetch_attendance_and_cache(self):
+    def fetch_attendance_task(self):
         log("Fetching attendance and saving to cache...")
         try:
             data = fetch_attendance()
@@ -179,7 +192,7 @@ class AttendanceBotGUI(tk.Tk):
         except Exception as e:
             log(f"Failed to fetch and cache: {e}", "e")
 
-    def fetch_and_generate_report(self):
+    def generate_report_task(self):
         log("Fetching data and generating report...")
         try:
             report = prepare_report_data()
@@ -188,7 +201,7 @@ class AttendanceBotGUI(tk.Tk):
         except Exception as e:
             log(f"Failed to generate report: {e}", "e")
 
-    def load_from_cache_and_generate_report(self):
+    def generate_report_from_cache_task(self):
         log("Loading data from cache...")
         try:
             report = prepare_report_data()
@@ -197,7 +210,7 @@ class AttendanceBotGUI(tk.Tk):
         except Exception as e:
             log(f"Failed to generate report from cache: {e}", "e")
 
-    def clear_cache(self):
+    def clear_cache_task(self):
         log("Clearing cache...")
         try:
             deleted = clear_all_cache_files()
@@ -205,7 +218,7 @@ class AttendanceBotGUI(tk.Tk):
         except Exception as e:
             log(f"Failed to clear cache: {e}", "e")
 
-    def generate_ocr_attendance(self):
+    def parse_ocr_task(self):
         log("Parsing screenshots via OCR...")
         try:
             result = parse_screenshots()

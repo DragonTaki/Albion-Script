@@ -5,7 +5,7 @@
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
 # Update Date: 2025/04/18
-# Version: v1.1 🔴
+# Version: v1.0
 # ----- ----- ----- -----
 
 import os

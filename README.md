@@ -40,13 +40,23 @@ For questions, feedback, or if you're interested in joining **Malicious Crew**, 
 
 ---
 
+## 📜 Third-Party Licenses
+
+This project uses **Tesseract OCR**, licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+This product includes software developed by the Tesseract OCR project (https://github.com/tesseract-ocr/tesseract) and is licensed under the Apache License, Version 2.0.
+
+> This repository **does not provide any license or redistribution rights** for its own code.  
+> It is intended for **private use only** within the Malicious Crew guild in Albion Online.
+
+---
+
 ## 👤 About Author
 
 - [Discord](https://discord.gg/GDMSyVt)
 - [Twitch](https://bit.ly/DragonTakiTwitch)
 - [YouTube](https://bit.ly/DragonTakiYTNew)
 - [Twitter](https://twitter.com/MacroDragonTaki)
-- [Fur Affinity](https://bit.ly/DragonTakiFA)
 - [巴哈姆特](https://bit.ly/DragonTakiBaha)
 
 ---
