@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/18
-# Version: v1.1
+# Update Date: 2025/04/22
+# Version: v1.2
 # ----- ----- ----- -----
 
 import json
@@ -14,25 +14,29 @@ import tkinter as tk
 from tkinter import font
 
 # Modular imports
-from botcore.fetch_attendance import fetch_attendance
+from botcore.fetch_web_attendance import fetch_web_attendance
 from botcore.fetch_guild_members import fetch_guild_members
-from botcore.generate_report import prepare_report_data, write_csv
+from botcore.fetch_textfile_attendance import fetch_textfile_attendance
+from botcore.fetch_ocr_attendance import parse_screenshots
+from botcore.generate_report import generate_report
 from botcore.cache import load_from_cache, save_to_cache, clear_all_cache_files
 from botcore.logger import log, set_external_logger, log_welcome_message
-from botcore.screenshot_ocr import parse_screenshots
+
+from botcore.ocr_processing import debug_crop_regions_by_template
 
 # Define constant values for configuration
-BG_COLOR = "#2E2E2E"
-BTN_BG_COLOR = "#5C5C5C"
-BTN_FG_COLOR = "white"
-LOGGER_BG_COLOR = "#333333"
-LOGGER_FG_COLOR = "white"
+BG_COLOR = "#08192D"
+BTN_BG_COLOR = "#0F2540"
+BTN_FG_COLOR = "#FCFAF2"
+LOGGER_BG_COLOR = "#434343"
+LOGGER_FG_COLOR = "#373C38"
 
 # Define cache type constants
 CACHE_TYPE_ATTENDANCE = "attendance"
 
 # Constants for buttons
-NUM_COLUMNS = 3
+NUM_COLUMNS = 4
+LOGGER_ROW_OFFSET = 1
 
 MIN_BTN_W = 350
 MIN_BTN_H = 60
@@ -44,6 +48,16 @@ MIN_LOGGER_H = 200
 MAX_LOGGER_W = 1000
 MAX_LOGGER_H = 400
 
+
+def configure_grid_layout(frame, num_buttons):
+    num_rows = (num_buttons + NUM_COLUMNS - 1) // NUM_COLUMNS
+    total_rows = num_rows + LOGGER_ROW_OFFSET  # +1 for logger
+    for r in range(total_rows):
+        frame.rowconfigure(r, weight=1)
+    for c in range(NUM_COLUMNS):
+        frame.columnconfigure(c, weight=1)
+    return num_rows  # Return button row count for logger position
+
 class AttendanceBotGUI(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -51,9 +65,9 @@ class AttendanceBotGUI(tk.Tk):
         self.title("Attendance Bot for Griffin Empire - created by @DragonTaki")
         self.geometry("1280x720")
         self.configure(bg=BG_COLOR)
+        self.frame = tk.Frame(self, bg=BG_COLOR)
         self.minsize(900, 600)
 
-        self.frame = tk.Frame(self)
         self.frame.pack(fill=tk.BOTH, expand=True)
 
         set_external_logger(self.log)
@@ -62,7 +76,7 @@ class AttendanceBotGUI(tk.Tk):
         self.update_sizes()
 
         log_welcome_message()
-
+    
     def create_widgets(self):
         button_font = font.Font(family="Helvetica", size=12, weight="bold")
 
@@ -73,15 +87,19 @@ class AttendanceBotGUI(tk.Tk):
             },
             {
                 "label": "Fetch attendance\n(Save as cache)",
-                "command": lambda: self.run_with_thread(self.fetch_attendance_task),
+                "command": lambda: self.run_with_thread(self.fetch_web_attendance_task),
             },
             {
-                "label": "Load extra attendance\n(Save as cache)",
-                "command": lambda: self.run_with_thread(self.parse_ocr_task),
+                "label": "Load attendance from textfile\n(Save as cache)",
+                "command": lambda: self.run_with_thread(self.fetch_textfile_attendance_task),
             },
             {
-                "label": "Fetch Attendance\nTHAN\nGenerate report directly\n(No need extra count attendance)",
-                "command": lambda: self.run_with_thread(self.generate_report_task),
+                "label": "Load attendance from screenshot\n(Save as cache)",
+                "command": lambda: self.run_with_thread(self.not_done_yet_task),
+            },
+            {
+                "label": "Generate report from web only\n[No extra attendance]",
+                "command": lambda: self.run_with_thread(self.generate_report_pure_task),
             },
             {
                 "label": "Generate report from cache",
@@ -90,6 +108,10 @@ class AttendanceBotGUI(tk.Tk):
             {
                 "label": "Clear Cache",
                 "command": lambda: self.run_with_thread(self.clear_cache_task),
+            },
+            {
+                "label": "Test Button",
+                "command": lambda: self.run_with_thread(self.test_task),
             }
         ]
 
@@ -102,19 +124,20 @@ class AttendanceBotGUI(tk.Tk):
             btn.grid(row=row, column=column, padx=20, pady=20, sticky="nsew")
             self.buttons.append(btn)
 
+        num_buttons = len(self.buttons_config)
+        button_rows = configure_grid_layout(self.frame, num_buttons)
+
+        logger_row = button_rows  # Logger is placed right after last button row
+
         self.logger = tk.Text(self.frame, height=10, width=70, wrap=tk.WORD,
-                              font=("Courier", 10), bg=LOGGER_BG_COLOR, fg=LOGGER_FG_COLOR)
+                            font=("Courier", 10), bg=LOGGER_BG_COLOR, fg=LOGGER_FG_COLOR)
         self.logger.config(state=tk.DISABLED)
-        self.scrollbar = tk.Scrollbar(self.frame, command=self.logger.yview)
+
+        self.scrollbar = tk.Scrollbar(self.frame, command=self.logger.yview, highlightbackground=BG_COLOR)
         self.logger.config(yscrollcommand=self.scrollbar.set)
 
-        self.logger.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
-        self.scrollbar.grid(row=3, column=2, sticky="ns")
-
-        for r in range(4):
-            self.frame.rowconfigure(r, weight=1)
-        for c in range(2):
-            self.frame.columnconfigure(c, weight=1)
+        self.logger.grid(row=logger_row, column=0, columnspan=NUM_COLUMNS, padx=10, pady=10, sticky="nsew")
+        self.scrollbar.grid(row=logger_row, column=NUM_COLUMNS, sticky="ns")
 
     def log(self, message):
         self.logger.config(state=tk.NORMAL)
@@ -163,10 +186,10 @@ class AttendanceBotGUI(tk.Tk):
     def run_with_thread(self, task_func):
         def wrapper():
             try:
-                task_func()  # 🔸 Run task in background
+                task_func()  # Run task in background
             finally:
-                self.set_all_buttons_state(tk.NORMAL)  # 🔸 Unlock all buttons after completion
-        self.set_all_buttons_state(tk.DISABLED)       # 🔸 Lock all buttons before starting
+                self.set_all_buttons_state(tk.NORMAL)  # Unlock all buttons after completion
+        self.set_all_buttons_state(tk.DISABLED)       # Lock all buttons before starting
         threading.Thread(target=wrapper, daemon=True).start()
         
     def set_all_buttons_state(self, state):
@@ -179,34 +202,50 @@ class AttendanceBotGUI(tk.Tk):
         try:
             data = fetch_guild_members()
             if data:
-                log("Done. Data fetched and cached.")
+                log("Done.")
         except Exception as e:
             log(f"Failed to fetch and cache: {e}", "e")
 
-    def fetch_attendance_task(self):
-        log("Fetching attendance and saving to cache...")
+    def fetch_web_attendance_task(self):
+        log("Fetching attendance from killboard and saving to cache...")
         try:
-            data = fetch_attendance()
+            data = fetch_web_attendance()
             if data:
-                log("Done. Data fetched and cached.")
+                log("Done.")
         except Exception as e:
             log(f"Failed to fetch and cache: {e}", "e")
 
-    def generate_report_task(self):
+    def fetch_textfile_attendance_task(self):
+        log("Parsing textfile attendance...")
+        try:
+            result = fetch_textfile_attendance()
+            if len(result) > 0:
+                log("Done.")
+        except Exception as e:
+            log(f"Failed to load attendance from file: {e}", "e")
+
+    def fetch_screenshot_attendance_task(self):
+        log("Parsing screenshots attendance via OCR...")
+        try:
+            result = parse_screenshots()
+            if len(result) > 0:
+                log("Done.")
+        except Exception as e:
+            log(f"OCR parsing failed: {e}", "e")
+
+    def generate_report_pure_task(self):
         log("Fetching data and generating report...")
         try:
-            report = prepare_report_data()
-            write_csv(report)
-            log("Report generated.")
+            report = generate_report(True, True)
+            log("Done.")
         except Exception as e:
             log(f"Failed to generate report: {e}", "e")
 
     def generate_report_from_cache_task(self):
         log("Loading data from cache...")
         try:
-            report = prepare_report_data()
-            write_csv(report)
-            log("Report generated from cache.")
+            report = generate_report(True)
+            log("Done.")
         except Exception as e:
             log(f"Failed to generate report from cache: {e}", "e")
 
@@ -218,13 +257,16 @@ class AttendanceBotGUI(tk.Tk):
         except Exception as e:
             log(f"Failed to clear cache: {e}", "e")
 
-    def parse_ocr_task(self):
-        log("Parsing screenshots via OCR...")
+    def test_task(self):
+        log("Testing...")
         try:
-            result = parse_screenshots()
-            log(f"OCR parsing done. {len(result)} days processed.")
+            result = debug_crop_regions_by_template()
+            log(f"Testing done. Return: {result}.")
         except Exception as e:
-            log(f"OCR parsing failed: {e}", "e")
+            log(f"Testing failed: {e}", "e")
+
+    def not_done_yet_task(self):
+        log("This function is not done...")
 
 if __name__ == "__main__":
     app = AttendanceBotGUI()

@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# fetch_weattendance.py
+# fetch_web_attendance.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
@@ -20,7 +20,7 @@ API_BASE_URL = "https://api-east.albionbattles.com/player"
 API_ENDPOINT_TEMPLATE = f"{API_BASE_URL}?guildSearch={{guild_name}}&interval={{interval}}&minGP={MIN_GP}"
 HEADERS = {"Accept": "application/json, text/plain, */*"}
 
-def fetch_attendance(if_save_to_cache=True):
+def fetch_web_attendance(if_save_to_cache=True):
     fetched_data = {interval: {} for interval in INTERVALS}
     for interval in INTERVALS:
         for guild in GUILD_INFO_LIST:

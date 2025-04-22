@@ -1,15 +1,33 @@
-# Ignore user-generated data files (attendance data, screenshots, etc.)
-attendance_data_*.csv
-screenshot/
+# Ignore users file
 cache/
+extra_attendance/
+report/
+temp/
+temp_debug/
+
+build/
+dist/
+
+*.csv
+*.spec
+
+# Don't ignore all files in the third_party directory
+!/third_party/*
 
 # Ignore Python bytecode files
 *.pyc
 __pycache__/
 
 # Ignore logs or other temporary files
+*.cache
 *.log
+*.temp
+*.tmp
 
 # Ignore system files
 .DS_Store
 Thumbs.db
+
+# Ignore poetry lock and config files
+poetry.lock
+pyproject.toml

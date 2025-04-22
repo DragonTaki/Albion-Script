@@ -1,13 +1,3 @@
-# Ignore users file
-attendance-bot-for-griffin-empire/cache/
-attendance-bot-for-griffin-empire/screenshot/
-attendance-bot-for-griffin-empire/debug_ocr_versions/
-attendance-bot-for-griffin-empire/temp/
-*.csv
-
-# Don't ignore all files in the third_party directory
-!attendance-bot-for-griffin-empire/third_party/*
-
 # Ignore Python bytecode files
 *.pyc
 __pycache__/
@@ -15,7 +5,3 @@ __pycache__/
 # Ignore system files
 .DS_Store
 Thumbs.db
-
-# Ignore poetry lock and config files
-poetry.lock
-pyproject.toml

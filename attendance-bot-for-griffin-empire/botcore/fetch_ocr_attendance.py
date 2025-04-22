@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# screenshot_ocr.py
+# fetch_ocr_attendance.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
@@ -13,12 +13,12 @@ from datetime import datetime
 from collections import defaultdict
 from PIL import Image
 
-from .config import CacheType, DATE_FORMAT, SCREENSHOT_FOLDER
+from .config import CacheType, DAYS_LOOKBACK, EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, IMAGE_EXTENSIONS
 from .cache import save_to_cache
 from .logger import log
-from .ocr_utils import (
+from .ocr_processing import (
     preprocess_all_versions,
-    extract_name_regions_with_opencv,
+    extract_name_regions_with_opencv, extract_name_regions, 
     save_debug_name_regions,
     get_valid_player_list,
     create_word_list_file,
@@ -28,8 +28,6 @@ from .ocr_utils import (
 )
 
 # Constants
-IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
-DAYS_LOOKBACK = 28
 AUTO_DELETE_TEMP_FILE = False  # toggle this to True to clean up debug folder
 
 def parse_screenshots(if_save_to_cache=True):
@@ -45,13 +43,13 @@ def parse_screenshots(if_save_to_cache=True):
     wordlist_path = create_word_list_file(player_list)
     temp_files = [wordlist_path]
 
-    for folder in os.listdir(SCREENSHOT_FOLDER):
-        folder_path = os.path.join(SCREENSHOT_FOLDER, folder)
+    for folder in os.listdir(EXTRA_ATTENDANCE_FOLDER):
+        folder_path = os.path.join(EXTRA_ATTENDANCE_FOLDER, folder)
         if not os.path.isdir(folder_path):
             continue
 
         try:
-            folder_date = datetime.strptime(folder, DATE_FORMAT)
+            folder_date = datetime.strptime(folder, EXTRA_ATTENDANCE_FOLDER_FORMAT)
         except ValueError:
             continue
 
@@ -77,7 +75,9 @@ def parse_screenshots(if_save_to_cache=True):
                 image_player_versions = defaultdict(set)
 
                 for version_label, version_image in version_images.items():
-                    name_regions = extract_name_regions_with_opencv(version_image)
+                    # name_regions = extract_name_regions_with_opencv(version_image)
+                    name_regions = extract_name_regions(version_image)
+                    print(f"SS:{name_regions}")
                     save_debug_name_regions(name_regions, full_path, version_label, folder)
 
                     log(f"[{version_label}] Found {len(name_regions)} name regions", "d")
@@ -119,7 +119,7 @@ def parse_screenshots(if_save_to_cache=True):
     if if_save_to_cache:
         if result_by_day:
             cache_data = {
-                "type": CacheType.OCR.value,
+                "type": CacheType.SCREENSHOT.value,
                 "json_data": result_by_day
             }
             save_to_cache(cache_data)

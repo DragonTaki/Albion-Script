@@ -55,7 +55,7 @@ def fetch_guild_members(if_save_to_cache=True):
     if if_save_to_cache:
         if result_map:
             cache_data = {
-                "type": CacheType.PLAYERS.value,
+                "type": CacheType.MEMBERLIST.value,
                 "json_data": result_map
             }
             save_to_cache(cache_data)
