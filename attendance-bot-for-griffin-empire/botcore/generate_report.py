@@ -4,15 +4,15 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/22
-# Version: v1.3
+# Update Date: 2025/04/23
+# Version: v1.4
 # ----- ----- ----- -----
 
 import csv
 import os
 from datetime import datetime
 
-from .config import CacheType, INTERVALS, MAX_CSV_VERSIONS, REPORT_FOLDER, CSV_EXTENSION, CSV_REPORT_PREFIX, CSV_TIMESTAMP_FORMAT
+from .config import CacheType, LogLevel, INTERVALS, MAX_CSV_VERSIONS, REPORT_FOLDER, CSV_EXTENSION, CSV_REPORT_PREFIX, CSV_TIMESTAMP_FORMAT
 from .cache import load_from_cache
 from .logger import log
 from .fetch_guild_members import fetch_guild_members
@@ -29,18 +29,18 @@ ATTENDANCE_FIELD_TEMPLATE = "{}DaysAttendance"
 def fetch_required_data(pure_report=False):
     player_list = load_from_cache(CacheType.MEMBERLIST.value)
     if not player_list:
-        log(f"No valid {CacheType.MEMBERLIST.value} cache found, attempting to fetch from server...", "w")
+        log(f"No valid {CacheType.MEMBERLIST.value} cache found, attempting to fetch from server...", LogLevel.WARN)
         player_list = fetch_guild_members()
         if not player_list:
-            log("Failed to retrieve player list.", "e")
+            log("Failed to retrieve player list.", LogLevel.ERROR)
             return None, None, None, None
 
     attendance_map = load_from_cache(CacheType.ATTENDANCE.value)
     if not attendance_map:
-        log(f"No valid {CacheType.ATTENDANCE.value} cache found, attempting to fetch from server...", "w")
+        log(f"No valid {CacheType.ATTENDANCE.value} cache found, attempting to fetch from server...", LogLevel.WARN)
         attendance_map = fetch_attendance()
         if not attendance_map:
-            log("Failed to retrieve attendance data.", "e")
+            log("Failed to retrieve attendance data.", LogLevel.ERROR)
             return None, None, None, None
 
     textfile_data = {}
@@ -48,12 +48,12 @@ def fetch_required_data(pure_report=False):
     if not pure_report:
         textfile_data = load_from_cache(CacheType.TEXTFILE.value)
         if not textfile_data:
-            log(f"No valid {CacheType.TEXTFILE.value} cache found, skipping {CacheType.TEXTFILE.value} attendance calculate.", "w")
+            log(f"No valid {CacheType.TEXTFILE.value} cache found, skipping {CacheType.TEXTFILE.value} attendance calculate.", LogLevel.WARN)
             textfile_data = {}
 
         screenshot_data = load_from_cache(CacheType.SCREENSHOT.value)
         if not screenshot_data:
-            log(f"No valid {CacheType.SCREENSHOT.value} cache found, skipping {CacheType.SCREENSHOT.value} attendance calculate.", "w")
+            log(f"No valid {CacheType.SCREENSHOT.value} cache found, skipping {CacheType.SCREENSHOT.value} attendance calculate.", LogLevel.WARN)
             screenshot_data = {}
 
     return player_list, attendance_map, textfile_data, screenshot_data
@@ -135,7 +135,7 @@ def write_csv(data_rows):
         relative_path = get_relative_path_to_target(filepath)
         log(f"Report written to \"{relative_path}\".")
     except Exception as e:
-        log(f"Failed to write CSV: \"{e}\".", "e")
+        log(f"Failed to write CSV: \"{e}\".", LogLevel.ERROR)
         return
 
     # Cleanup old CSVs
@@ -154,6 +154,6 @@ def delete_old_csvs(report_dir):
             abs_filepath = os.path.abspath(os.path.join(report_dir, oldfile))
             os.remove(abs_filepath)
             relative_path = get_relative_path_to_target(abs_filepath)
-            log(f"Deleted old CSV file: \"{relative_path}\".")
+            log(f"Deleted old report: \"{relative_path}\".", LogLevel.WARN)
     except Exception as e:
-        log(f"Failed to delete old CSV files: \"{e}\".", "e")
+        log(f"Failed to delete old reports: \"{e}\".", LogLevel.ERROR)

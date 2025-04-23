@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/22
-# Version: v1.1
+# Update Date: 2025/04/23
+# Version: v1.2
 # ----- ----- ----- -----
 
 import os
@@ -13,6 +13,9 @@ import time
 import hashlib
 import sys
 
+from datetime import datetime
+
+from .config import EXTRA_ATTENDANCE_FOLDER_FORMAT
 from .logger import log
 
 # Constants for detecting PyInstaller environment
@@ -28,6 +31,14 @@ def ensure_folder_exists(folder_path):
     """Create the folder if it doesn't exist"""
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
+
+def is_valid_folder_name(folder_name):
+    try:
+        # Try to parse the folder name to see if it matches the date format
+        datetime.strptime(folder_name, EXTRA_ATTENDANCE_FOLDER_FORMAT)
+        return True
+    except ValueError:
+        return False
 
 # Generate random filename based on type
 def generate_cache_filename(cache_type):
@@ -67,3 +78,23 @@ def get_relative_path_to_target(filepath):
     except ValueError as e:
         # Handle case where drives differ (e.g., E: vs C:)
         return filepath
+
+def get_file_checksum(filepath: str) -> str:
+    """
+    Compute MD5 checksum for a file.
+    :param filepath: Absolute path to the file
+    :return: Hexadecimal checksum string
+    """
+    with open(filepath, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+def check_file_checksum(filepath: str, expected_checksum: str) -> bool:
+    """
+    Check whether file's checksum matches the expected value.
+    :param filepath: Absolute path to the file
+    :param expected_checksum: Expected MD5 hash
+    :return: True if matches, False otherwise
+    """
+    if not os.path.exists(filepath):
+        return False
+    return get_file_checksum(filepath) == expected_checksum

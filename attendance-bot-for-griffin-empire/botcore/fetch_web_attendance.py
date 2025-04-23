@@ -4,14 +4,14 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/18
-# Version: v1.0
+# Update Date: 2025/04/23
+# Version: v1.1
 # ----- ----- ----- -----
 
 import requests
 
-from .config import CacheType, GUILD_INFO_LIST, INTERVALS
-from .cache import save_to_cache
+from .config import CacheType, LogLevel, GUILD_INFO_LIST, INTERVALS
+from .cache import save_to_cache_if_needed
 from .logger import log
 
 # API constants
@@ -29,7 +29,7 @@ def fetch_web_attendance(if_save_to_cache=True):
             try:
                 response = requests.get(url, headers=HEADERS)
                 if response.status_code != 200:
-                    log(f"Failed to fetch data for {guild_name} at {interval}d. HTTP {response.status_code}.", "w")
+                    log(f"Failed to fetch data for {guild_name} at {interval}d. HTTP {response.status_code}.", LogLevel.ERROR)
                     continue
                 data = response.json()
                 if isinstance(data, list):
@@ -39,17 +39,10 @@ def fetch_web_attendance(if_save_to_cache=True):
                             num = player["battleNumber"]
                             fetched_data[interval][name] = fetched_data[interval].get(name, 0) + num
             except Exception as e:
-                log(f"Exception occurred while fetching data: {e}.", "e")
+                log(f"Exception occurred while fetching data: {e}.", LogLevel.ERROR)
                 continue
 
     # Save to cache
-    if if_save_to_cache:
-        if fetched_data:
-            cache_data = {
-                "type": CacheType.ATTENDANCE.value,
-                "json_data": fetched_data
-            }
-            save_to_cache(cache_data)
-            log(f"Attendance saved to cache.")
+    save_to_cache_if_needed(CacheType.ATTENDANCE, fetched_data, if_save_to_cache, "Killboard attendance")
 
     return fetched_data

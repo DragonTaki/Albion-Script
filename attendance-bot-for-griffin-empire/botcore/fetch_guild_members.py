@@ -4,14 +4,14 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/18
-# Version: v1.0
+# Update Date: 2025/04/23
+# Version: v1.1
 # ----- ----- ----- -----
 
 import requests
 
-from .config import CacheType, GUILD_INFO_LIST
-from .cache import save_to_cache
+from .config import CacheType, LogLevel, GUILD_INFO_LIST
+from .cache import save_to_cache_if_needed
 from .logger import log
 
 # API constants
@@ -32,12 +32,12 @@ def fetch_guild_members(if_save_to_cache=True):
 
             response = requests.get(url, headers=HEADERS)
             if response.status_code != 200:
-                log(f"HTTP {response.status_code} when fetching {guild_name} members.", "e")
+                log(f"HTTP {response.status_code} when fetching {guild_name} members.", LogLevel.ERROR)
                 continue
 
             data = response.json()
             if not data:
-                log(f"No data returned from API for {guild_name}.", "e")
+                log(f"No data returned from API for {guild_name}.", LogLevel.ERROR)
                 continue
 
             for player in data:
@@ -48,17 +48,10 @@ def fetch_guild_members(if_save_to_cache=True):
             log(f"Successfully fetched {len(data)} members from {guild_name}.")
 
         except Exception as e:
-            log(f"Exception occurred while fetching {guild_name}: {str(e)}.", "e")
+            log(f"Exception occurred while fetching {guild_name}: {str(e)}.", LogLevel.ERROR)
             continue
 
     # Save to cache
-    if if_save_to_cache:
-        if result_map:
-            cache_data = {
-                "type": CacheType.MEMBERLIST.value,
-                "json_data": result_map
-            }
-            save_to_cache(cache_data)
-            log(f"Member list saved to cache.")
+    save_to_cache_if_needed(CacheType.MEMBERLIST, result_map, if_save_to_cache, "Member list")
 
     return result_map

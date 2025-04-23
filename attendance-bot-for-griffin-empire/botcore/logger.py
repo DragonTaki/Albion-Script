@@ -4,14 +4,14 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/18
-# Version: v1.1
+# Update Date: 2025/04/23
+# Version: v1.2
 # ----- ----- ----- -----
 
 from datetime import datetime
 import json
 
-from .config import TIMESTAMP_FORMAT
+from .config import LogLevel, DEBUG_MODE, TIMESTAMP_FORMAT
 
 external_logger = None  # GUI logger callback
 
@@ -27,22 +27,21 @@ def set_external_logger(callback_fn):
     external_logger = callback_fn
 
 # Main function to log messages
-def log(message, level=""):
-    level_str = "info"
-    if level == "w":
-        level_str = "warn"
-    elif level == "e":
-        level_str = "error"
+def log(message, level=LogLevel.INFO):
+    if level == LogLevel.DEBUG and not DEBUG_MODE:
+        return
+
+    level_str = level.label
+    level_color = level.color or "white"
 
     timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
-    prefix = level_str.capitalize()
-    full_text = f"{timestamp} [{prefix}] {message}"
+    full_text = f"{timestamp} [{level_str}] {message}"
     print(full_text)  # Console
 
     if external_logger:
         log_json = json.dumps({
             "text": full_text,
-            "color": LEVEL_COLOR_MAP.get(level_str, "white"),
+            "color": level_color,
             "tag": f"tag_{level_str}"
         })
         external_logger(log_json)

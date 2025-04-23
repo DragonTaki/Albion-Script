@@ -4,15 +4,15 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/22
-# Version: v1.3
+# Update Date: 2025/04/23
+# Version: v1.4
 # ----- ----- ----- -----
 
 import os
 from datetime import datetime, timezone, timedelta
 import pickle
 
-from .config import CacheType, CACHE_EXPIRY_HOURS, CACHE_FOLDER, CACHE_EXTENSION, MAX_CACHE_VERSIONS
+from .config import CacheType, LogLevel, CACHE_EXPIRY_HOURS, CACHE_FOLDER, CACHE_EXTENSION, MAX_CACHE_VERSIONS
 from .logger import log
 from .utils import (
     generate_cache_filename,
@@ -28,17 +28,17 @@ CACHE_TYPES = [e.value for e in CacheType]
 # Save cache as JSON data in binary format
 def save_to_cache(data_dict):
     if not isinstance(data_dict, dict):
-        log("Cache data must be a dictionary.", "e")
+        log("Cache data must be a dictionary.", LogLevel.ERROR)
         return
 
     required_keys = {"type", "json_data"}
     if not required_keys.issubset(data_dict):
-        log(f"Cache data missing required keys: {required_keys}.", "e")
+        log(f"Cache data missing required keys: {required_keys}.", LogLevel.ERROR)
         return
 
     cache_type = data_dict["type"]
     if cache_type not in CACHE_TYPES:
-        log(f"Unsupported cache type: {cache_type}.", "e")
+        log(f"Unsupported cache type: {cache_type}.", LogLevel.ERROR)
         return
 
     filename = generate_cache_filename(cache_type)
@@ -58,7 +58,27 @@ def save_to_cache(data_dict):
         cleanup_old_cache_files(cache_type, keep_count=MAX_CACHE_VERSIONS)
 
     except Exception as e:
-        log(f"Failed to save cache: {e}", "e")
+        log(f"Failed to save cache: {e}", LogLevel.ERROR)
+
+def save_to_cache_if_needed(cache_type, data, if_save_to_cache, saved_item_name=""):
+    """
+    Save data to cache if the condition is met.
+    
+    :param cache_type: Cache type (e.g., CacheType.MEMBERLIST, CacheType.SCREENSHOT, etc.)
+    :param data: Data to be cached (could be a dictionary or other structures)
+    :param if_save_to_cache: Flag to check if the data should be saved to cache
+    :param additional_info: Additional information to log or display (optional)
+    """
+    if if_save_to_cache:
+        if data:
+            cache_data = {
+                "type": cache_type.value,
+                "json_data": data
+            }
+            save_to_cache(cache_data)
+            log(f"{saved_item_name} saved to cache.")
+        else:
+            log(f"Failed. Nothing saved to cache.", LogLevel.ERROR)
 
 # Load the latest valid cache of given type
 def load_from_cache(cache_type):
@@ -88,7 +108,7 @@ def load_from_cache(cache_type):
 
             if data_type != cache_type:
                 os.remove(full_path)
-                log(f"Inconsistent type in \"{fname}\" (found: {data_type}), file removed.", "w")
+                log(f"Inconsistent type in \"{fname}\" (found: {data_type}), file removed.", LogLevel.WARN)
                 continue
 
             if datetime.now(timezone.utc) - ctime >= timedelta(hours=CACHE_EXPIRY_HOURS):
@@ -102,7 +122,7 @@ def load_from_cache(cache_type):
 
         except Exception as e:
             os.remove(get_cache_file_path(fname))
-            log(f"Invalid cache file \"{fname}\" removed due to error: {e}", "w")
+            log(f"Invalid cache file \"{fname}\" removed due to error: {e}", LogLevel.WARN)
 
     if latest_valid:
         relative_path = get_relative_path_to_target(latest_valid_file)
@@ -120,7 +140,7 @@ def cleanup_old_cache_files(cache_type, keep_count):
 
     for ctype in types_to_clean:
         if ctype not in CACHE_TYPES:
-            log(f"Invalid cache type for cleanup: {ctype}", "e")
+            log(f"Invalid cache type for cleanup: {ctype}", LogLevel.ERROR)
             continue
 
         try:
@@ -138,10 +158,10 @@ def cleanup_old_cache_files(cache_type, keep_count):
             for file_path, _ in files_to_delete:
                 os.remove(file_path)
                 relative_path = get_relative_path_to_target(file_path)
-                log(f"Removed old cache: \"{relative_path}\".", "w")
+                log(f"Removed old cache: \"{relative_path}\".", LogLevel.WARN)
                 deleted_count += 1
         except Exception as e:
-            log(f"Error during cache cleanup: {e}.", "e")
+            log(f"Error during cache cleanup: {e}.", LogLevel.ERROR)
 
     return deleted_count
 

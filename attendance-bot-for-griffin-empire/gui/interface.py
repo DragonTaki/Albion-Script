@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/22
-# Version: v1.2
+# Update Date: 2025/04/23
+# Version: v1.3
 # ----- ----- ----- -----
 
 import json
@@ -14,15 +14,16 @@ import tkinter as tk
 from tkinter import font
 
 # Modular imports
+from botcore.config import LogLevel
 from botcore.fetch_web_attendance import fetch_web_attendance
 from botcore.fetch_guild_members import fetch_guild_members
 from botcore.fetch_textfile_attendance import fetch_textfile_attendance
-from botcore.fetch_ocr_attendance import parse_screenshots
+from botcore.fetch_screenshot_attendance import fetch_screenshot_attendance
 from botcore.generate_report import generate_report
-from botcore.cache import load_from_cache, save_to_cache, clear_all_cache_files
+from botcore.cache import clear_all_cache_files
+from botcore.daily_summary import clear_all_daily_summary_files
+from botcore.log import append_runtime_log, save_log, save_all_logs, clear_log
 from botcore.logger import log, set_external_logger, log_welcome_message
-
-from botcore.ocr_processing import debug_crop_regions_by_template
 
 # Define constant values for configuration
 BG_COLOR = "#08192D"
@@ -95,7 +96,7 @@ class AttendanceBotGUI(tk.Tk):
             },
             {
                 "label": "Load attendance from screenshot\n(Save as cache)",
-                "command": lambda: self.run_with_thread(self.not_done_yet_task),
+                "command": lambda: self.run_with_thread(self.fetch_screenshot_attendance_task),
             },
             {
                 "label": "Generate report from web only\n[No extra attendance]",
@@ -106,12 +107,12 @@ class AttendanceBotGUI(tk.Tk):
                 "command": lambda: self.run_with_thread(self.generate_report_from_cache_task),
             },
             {
-                "label": "Clear Cache",
+                "label": "Clear Attendance Cache",
                 "command": lambda: self.run_with_thread(self.clear_cache_task),
             },
             {
-                "label": "Test Button",
-                "command": lambda: self.run_with_thread(self.test_task),
+                "label": "Clear Daily Summary Cache",
+                "command": lambda: self.run_with_thread(self.clear_daily_summary_task),
             }
         ]
 
@@ -139,8 +140,61 @@ class AttendanceBotGUI(tk.Tk):
         self.logger.grid(row=logger_row, column=0, columnspan=NUM_COLUMNS, padx=10, pady=10, sticky="nsew")
         self.scrollbar.grid(row=logger_row, column=NUM_COLUMNS, sticky="ns")
 
+        # Right-click copy menu for logger
+        self.logger_menu = tk.Menu(self.logger, tearoff=0)
+
+        # Format helper to align label and shortcut nicely
+        MIN_MENU_WIDTH = 32
+        def format_menu_item(label_text: str, shortcut_text: str, total_width: int = 40) -> str:
+            """Return a string with the label and shortcut aligned visually."""
+            padding = total_width - len(label_text) - len(shortcut_text)
+            return f"{label_text}{' ' * max(padding, 1)}{shortcut_text}"
+
+        # Add menu commands with aligned text
+        self.logger_menu.add_command(
+            label=format_menu_item("Copy", "Ctrl + C"),
+            command=lambda: self.logger.event_generate("<<Copy>>")
+        )
+        self.logger_menu.add_command(
+            label=format_menu_item("Select All", "Ctrl + A"),
+            command=lambda: self.logger.event_generate("<<SelectAll>>")
+        )
+        self.logger_menu.add_separator()
+        self.logger_menu.add_command(
+            label=format_menu_item("Save As", "Ctrl + S"),
+            command=lambda: self.save_log(self.get_selected_log_lines())
+        )
+        self.logger_menu.add_command(
+            label=format_menu_item("Save All As", "Ctrl + Shift + S"),
+            command=lambda: self.save_all_logs()
+        )
+        self.logger_menu.add_separator()
+        self.logger_menu.add_command(
+            label=format_menu_item("Clear Log", "Ctrl + L"),
+            command=lambda: self.clear_log()
+        )
+
+        # Bind right click to show menu
+        self.logger.bind("<Button-3>", self.show_logger_context_menu)
+
+        # Bind keyboard shortcuts
+        self.logger.bind("<Control-c>", lambda e: self.logger.event_generate("<<Copy>>"))
+        self.logger.bind("<Control-a>", lambda e: self.logger.event_generate("<<SelectAll>>"))
+        self.logger.bind("<Control-s>", lambda e: self.save_log())
+        self.logger.bind("<Control-S>", lambda e: self.save_all_logs())  # Shift + Ctrl + S
+        self.logger.bind("<Control-l>", lambda e: self.clear_log())
+
+    # Context menu handler
+    def show_logger_context_menu(self, event):
+        try:
+            self.logger_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.logger_menu.grab_release()
+
+    # Logger functions
     def log(self, message):
         self.logger.config(state=tk.NORMAL)
+        full_plain_text = ""
         try:
             parsed = json.loads(message)
             if isinstance(parsed, list):
@@ -153,6 +207,7 @@ class AttendanceBotGUI(tk.Tk):
                     }
                     self.logger.insert(tk.END, content, tag)
                     self.logger.tag_config(tag, **styles)
+                    full_plain_text += content
             else:
                 content = parsed.get("text", "")
                 tag = parsed.get("tag", None)
@@ -162,10 +217,30 @@ class AttendanceBotGUI(tk.Tk):
                 }
                 self.logger.insert(tk.END, content + "\n", tag)
                 self.logger.tag_config(tag, **styles)
+                full_plain_text += content
         except Exception:
             self.logger.insert(tk.END, message + "\n")
+            full_plain_text = message
         self.logger.yview(tk.END)
         self.logger.config(state=tk.DISABLED)
+        append_runtime_log(full_plain_text.strip())
+
+    # Logger actions
+    def get_selected_log_lines(self):
+        selected_text = self.logger.get(self.logger.index(tk.INSERT) + " linestart", self.logger.index(tk.INSERT) + " lineend")
+        return selected_text.splitlines()
+    
+    def save_log(self, selected_log_lines):
+        saved_log_path = save_log(selected_log_lines)
+        log(f"Log saved at \"{saved_log_path}\".")
+        
+    def save_all_logs(self):
+        saved_log_path = save_all_logs(self.logger.get("1.0", tk.END))
+        log(f"Log saved at \"{saved_log_path}\".")
+
+    def clear_log(self):
+        clear_log(self.logger)
+        log_welcome_message()
 
     def update_sizes(self, event=None):
         window_width = self.winfo_width()
@@ -204,7 +279,7 @@ class AttendanceBotGUI(tk.Tk):
             if data:
                 log("Done.")
         except Exception as e:
-            log(f"Failed to fetch and cache: {e}", "e")
+            log(f"Failed to fetch and cache: {e}", LogLevel.ERROR)
 
     def fetch_web_attendance_task(self):
         log("Fetching attendance from killboard and saving to cache...")
@@ -213,7 +288,7 @@ class AttendanceBotGUI(tk.Tk):
             if data:
                 log("Done.")
         except Exception as e:
-            log(f"Failed to fetch and cache: {e}", "e")
+            log(f"Failed to fetch and cache: {e}", LogLevel.ERROR)
 
     def fetch_textfile_attendance_task(self):
         log("Parsing textfile attendance...")
@@ -222,16 +297,16 @@ class AttendanceBotGUI(tk.Tk):
             if len(result) > 0:
                 log("Done.")
         except Exception as e:
-            log(f"Failed to load attendance from file: {e}", "e")
+            log(f"Failed to load attendance from file: {e}", LogLevel.ERROR)
 
     def fetch_screenshot_attendance_task(self):
         log("Parsing screenshots attendance via OCR...")
         try:
-            result = parse_screenshots()
+            result = fetch_screenshot_attendance()
             if len(result) > 0:
                 log("Done.")
         except Exception as e:
-            log(f"OCR parsing failed: {e}", "e")
+            log(f"OCR parsing failed: {e}", LogLevel.ERROR)
 
     def generate_report_pure_task(self):
         log("Fetching data and generating report...")
@@ -239,7 +314,7 @@ class AttendanceBotGUI(tk.Tk):
             report = generate_report(True, True)
             log("Done.")
         except Exception as e:
-            log(f"Failed to generate report: {e}", "e")
+            log(f"Failed to generate report: {e}", LogLevel.ERROR)
 
     def generate_report_from_cache_task(self):
         log("Loading data from cache...")
@@ -247,7 +322,7 @@ class AttendanceBotGUI(tk.Tk):
             report = generate_report(True)
             log("Done.")
         except Exception as e:
-            log(f"Failed to generate report from cache: {e}", "e")
+            log(f"Failed to generate report from cache: {e}", LogLevel.ERROR)
 
     def clear_cache_task(self):
         log("Clearing cache...")
@@ -255,7 +330,15 @@ class AttendanceBotGUI(tk.Tk):
             deleted = clear_all_cache_files()
             log(f"Cache cleared. Deleted {deleted} files.")
         except Exception as e:
-            log(f"Failed to clear cache: {e}", "e")
+            log(f"Failed to clear cache: {e}", LogLevel.ERROR)
+
+    def clear_daily_summary_task(self):
+        log("Clearing daily summary task...")
+        try:
+            deleted = clear_all_daily_summary_files()
+            log(f"Cache cleared. Deleted {deleted} files.")
+        except Exception as e:
+            log(f"Failed to clear daily summary file: {e}", LogLevel.ERROR)
 
     def test_task(self):
         log("Testing...")
@@ -263,7 +346,7 @@ class AttendanceBotGUI(tk.Tk):
             result = debug_crop_regions_by_template()
             log(f"Testing done. Return: {result}.")
         except Exception as e:
-            log(f"Testing failed: {e}", "e")
+            log(f"Testing failed: {e}", LogLevel.ERROR)
 
     def not_done_yet_task(self):
         log("This function is not done...")
