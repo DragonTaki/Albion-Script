@@ -23,6 +23,7 @@ DAYS_LOOKBACK = max(INTERVALS)
 
 # Folder Paths
 CACHE_FOLDER = "cache"
+DATA_FOLDER = "data"
 DEBUG_FOLDER = "temp_debug"
 EXTRA_ATTENDANCE_FOLDER = "extra_attendance"
 LOG_FOLDER = "log"

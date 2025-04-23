@@ -20,7 +20,7 @@ from .logger import log
 
 # Constants for detecting PyInstaller environment
 IS_PACKAGED = hasattr(sys, "_MEIPASS")
-BASE_PATH = os.getcwd()
+BASE_PATH = sys._MEIPASS if IS_PACKAGED else os.path.abspath(".")
 
 # Constants for general usage
 DEFAULT_ENCODING = "utf-8"

@@ -14,18 +14,23 @@ from datetime import datetime
 from collections import defaultdict
 from PIL import Image
 from fuzzywuzzy import fuzz
+from enum import Enum
 
 import cv2
 import pytesseract
 import shutil
 from PIL import Image, ImageOps, ImageFilter
-import re
 
-from .config import CacheType, LogLevel, DAILY_SUMMARY, TEMP_FOLDER, DEBUG_FOLDER, DEBUG_MODE, IMAGE_EXTENSIONS, DAYS_LOOKBACK, EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, IMAGE_EXTENSIONS
+from .config import CacheType, LogLevel, DAILY_SUMMARY, TEMP_FOLDER, DATA_FOLDER, DEBUG_FOLDER, DEBUG_MODE, IMAGE_EXTENSIONS, DAYS_LOOKBACK, EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, IMAGE_EXTENSIONS
 from .cache import load_from_cache
 from .fetch_guild_members import fetch_guild_members
 from .logger import log
-from .utils import get_file_checksum, get_path
+from .utils import get_file_checksum, get_path, ensure_folder_exists
+
+min_scale = 0.7
+max_scale = 1.9
+step = 0.1
+MATCH_SCALES = np.arange(min_scale, max_scale + step, step).round(2).tolist()
 
 # Constants
 AUTO_DELETE_TEMP_FILE = False  # toggle this to True to clean up debug folder
@@ -53,8 +58,9 @@ def pil_to_cv2_gray(image: Image.Image):
 
 # Constants
 WORDLIST_TEMP_FILENAME = "temp_wordlist.txt"
-WORDLIST_TEMP_FILE = TEMP_FOLDER + os.sep + WORDLIST_TEMP_FILENAME
-BUTTON_TEMPLATE_PATH = os.path.join("data", "button.png")
+WORDLIST_TEMP_FILE = os.path.join(TEMP_FOLDER, WORDLIST_TEMP_FILENAME)
+ensure_folder_exists(TEMP_FOLDER)
+BUTTON_TEMPLATE_PATH = get_path(DATA_FOLDER, "button.png")
 BUTTON_TEMPLATE_ORIG = Image.open(BUTTON_TEMPLATE_PATH)
 BUTTON_TEMPLATE_ENLARGED = enlarge_image(BUTTON_TEMPLATE_ORIG)
 BUTTON_TEMPLATE_CV2 = pil_to_cv2_gray(BUTTON_TEMPLATE_ENLARGED)
@@ -81,6 +87,11 @@ SHARPEN_KERNEL = np.array([
 
 # Fuzzy matching threshold
 FUZZY_THRESHOLD = 75
+
+class MergeStrategy(Enum):
+    LEFTMOST = "left"
+    MIDDLE = "middle"
+    RIGHTMOST = "right"
 
 # Tesseract setup
 TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "third-party", "tesseract")
@@ -204,17 +215,17 @@ def crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: i
     try:
         image_cv2 = pil_to_cv2_gray(enlarged_image)
 
-        matched_points = match_template(image_cv2, BUTTON_TEMPLATE_CV2, threshold=0.8)
-        if not matched_points:
+        matched_points_with_scale = match_template(image_cv2, BUTTON_TEMPLATE_CV2, MATCH_SCALES, threshold=0.8)
+        if not matched_points_with_scale:
             log("No area matched with template.", LogLevel.WARN)
             return []
 
         # Group matched y-values into rows
-        matched_points.sort(key=lambda pt: pt[1])
+        matched_points_with_scale.sort(key=lambda pt: pt[1])
         grouped_rows = []
-        current_row = [matched_points[0]]
+        current_row = [matched_points_with_scale[0]]
 
-        for pt in matched_points[1:]:
+        for pt in matched_points_with_scale[1:]:
             if abs(pt[1] - current_row[-1][1]) <= MAX_VERTICAL_DIFF:
                 current_row.append(pt)
             else:
@@ -226,11 +237,11 @@ def crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: i
         name_regions = []
         for row in grouped_rows:
             row.sort(key=lambda pt: pt[0])  # sort left to right
-            for (x, y) in row:
-                left = max(x + NameRegion.Offset.X, 0)
-                top = max(y + NameRegion.Offset.Y, 0)
-                right = left + NameRegion.Size.Width
-                bottom = top + NameRegion.Size.Height
+            for (x, y, scale) in row:
+                left = max(int(x + NameRegion.Offset.X * scale), 0)
+                top = max(int(y + NameRegion.Offset.Y * scale), 0)
+                right = left + int(NameRegion.Size.Width * scale)
+                bottom = top + int(NameRegion.Size.Height * scale)
 
                 # Check if the region is already processed using tolerance
                 region = (left, top, right, bottom)
@@ -254,23 +265,84 @@ def crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: i
         log(f"Failed to extract name regions: {e}", LogLevel.ERROR)
         return []
 
-def match_template(image_gray: np.ndarray, template_gray: np.ndarray, threshold: float = 0.8) -> list[tuple[int, int]]:
+def match_template(
+    image_gray: np.ndarray,
+    template_gray: np.ndarray,
+    scales: list[float],
+    threshold: float = 0.8
+) -> list[tuple[int, int]]:
     """
-    Match a grayscale template within a grayscale image.
+    Match a grayscale template within a grayscale image, with optional scaling.
 
     Args:
         image_gray: The target image in grayscale.
         template_gray: The template image in grayscale.
         threshold: Matching threshold between 0 and 1.
+        scales: A list of scale factors to resize the template.
 
     Returns:
         A list of (x, y) coordinates where matches were found.
     """
-    result = cv2.matchTemplate(image_gray, template_gray, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(result >= threshold)
-    points = list(zip(*loc[::-1]))  # (x, y) points
+    matched_points = []
 
-    return points
+    for scale in scales:
+        if scale != 1.0:
+            resized_template = cv2.resize(template_gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        else:
+            resized_template = template_gray
+
+        result = cv2.matchTemplate(image_gray, resized_template, cv2.TM_CCOEFF_NORMED)
+        loc = np.where(result >= threshold)
+        points = list(zip(*loc[::-1]))  # (x, y)
+
+        # Optional: remove duplicates from overlapping scale matches
+        matched_points.extend([(x, y, scale) for (x, y) in points])
+        matched_points = deduplicate_matches(matched_points, tolerance=10)
+
+    return matched_points
+
+def deduplicate_matches(points: list[tuple[int, int, float]], tolerance: int = 10,
+                        strategy: MergeStrategy = MergeStrategy.MIDDLE) -> list[tuple[int, int, float]]:
+    """
+    Merge nearby matching points (possibly from different scales) into unique points.
+
+    Args:
+        points: List of (x, y, scale) match points.
+        tolerance: Pixel distance within which to merge points.
+        strategy: Strategy to choose representative point from a group.
+
+    Returns:
+        List of deduplicated (x, y, scale) points.
+    """
+    clusters = []
+
+    for x, y, scale in points:
+        added = False
+        for cluster in clusters:
+            cx, cy, _ = cluster[0]
+            if abs(x - cx) <= tolerance and abs(y - cy) <= tolerance:
+                cluster.append((x, y, scale))
+                added = True
+                break
+        if not added:
+            clusters.append([(x, y, scale)])
+
+    # Select representative point from each cluster
+    result = []
+    for cluster in clusters:
+        if strategy == MergeStrategy.LEFTMOST:
+            representative = min(cluster, key=lambda pt: pt[0])  # 最左邊 x 最小
+        elif strategy == MergeStrategy.RIGHTMOST:
+            representative = max(cluster, key=lambda pt: pt[0])  # 最右邊 x 最大
+        elif strategy == MergeStrategy.MIDDLE:
+            sorted_cluster = sorted(cluster, key=lambda pt: pt[0])
+            representative = sorted_cluster[len(sorted_cluster) // 2]
+        else:
+            representative = cluster[0]  # 預設 fallback
+
+        result.append(representative)
+
+    return result
 
 def preprocess_v1(image: Image.Image) -> Image.Image:
     # Convert to grayscale, and optionally increase contrast slightly

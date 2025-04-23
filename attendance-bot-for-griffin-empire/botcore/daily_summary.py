@@ -12,6 +12,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from collections import Counter
 
 from .config import LogLevel, DAILY_SUMMARY, EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, INTERVALS, DAYS_LOOKBACK, TEXT_EXTENSIONS, FORCE_NEW_DAILY_SUMMARY
 from .logger import log
@@ -27,10 +28,9 @@ def save_daily_summary(summary_type: SimpleNamespace, folder_name: str, attendan
     :param attendance_list: List of dicts in format [{"name": "Player1", "attendance": 1}, ...]
     :param meta: Metadata (e.g., checksums or OCR source)
     """
-    folder_path = get_path(EXTRA_ATTENDANCE_FOLDER, folder_name)
-
-    summary_path = get_path(folder_path, summary_type.SUMMARY)
-    meta_path = get_path(folder_path, summary_type.META)
+    folder_path = os.path.join(EXTRA_ATTENDANCE_FOLDER, folder_name)
+    summary_path = os.path.join(folder_path, summary_type.SUMMARY)
+    meta_path = os.path.join(folder_path, summary_type.META)
 
     try:
         ensure_folder_exists(folder_path)
@@ -110,8 +110,8 @@ def collect_all_daily_attendance(summary_type: SimpleNamespace):
 
 # Check if summary + meta exist and match
 def check_daily_summary(summary_type: SimpleNamespace, folder_path: str):
-    summary_path = get_path(folder_path, summary_type.SUMMARY)
-    meta_path = get_path(folder_path, summary_type.META)
+    summary_path = os.path.join(folder_path, summary_type.SUMMARY)
+    meta_path = os.path.join(folder_path, summary_type.META)
 
     if not os.path.exists(summary_path) or not os.path.exists(meta_path):
         return False
@@ -135,9 +135,9 @@ def load_daily_summary(summary_type: SimpleNamespace, folder_name: str) -> tuple
     """
     Load summary and metadata for a specific day and type (TEXTFILE or SCREENSHOT).
     """
-    folder_path = get_path(EXTRA_ATTENDANCE_FOLDER, folder_name)
-    summary_path = get_path(folder_path, summary_type.SUMMARY)
-    meta_path = get_path(folder_path, summary_type.META)
+    folder_path = os.path.join(EXTRA_ATTENDANCE_FOLDER, folder_name)
+    summary_path = os.path.join(folder_path, summary_type.SUMMARY)
+    meta_path = os.path.join(folder_path, summary_type.META)
 
     if not os.path.exists(summary_path) or not os.path.exists(meta_path):
         return None, None
@@ -202,7 +202,7 @@ def cleanup_old_daily_summary_files(keep_count):
         
         # Get the full paths of the files and their modification times
         full_paths = [
-            (get_path(folder_path, f), os.path.getmtime(get_path(folder_path, f)))
+            (os.path.join(folder_path, f), os.path.getmtime(os.path.join(folder_path, f)))
             for f in all_files
         ]
         

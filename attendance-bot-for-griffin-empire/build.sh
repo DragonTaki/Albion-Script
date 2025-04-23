@@ -16,6 +16,7 @@ ENTRY_POINT="run.py"
 DIST_DIR="dist"
 CONFIG_FILE="botcore/config.py"
 RESOURCE_FOLDER="data"
+THIRD_PARTY_FOLDER="third-party"
 OUTPUT_NAME="Albion_Attendance_Bot_made_by_DragonTaki"
 ICON_FILE="icon.ico"
 
@@ -62,6 +63,7 @@ echo "🚀 Packaging with PyInstaller..."
 pyinstaller --noconfirm --onefile --windowed \
   --name "$OUTPUT_NAME" \
   --add-data "$RESOURCE_FOLDER$SEP$RESOURCE_FOLDER" \
+  --add-data "$THIRD_PARTY_FOLDER$SEP$THIRD_PARTY_FOLDER" \
   $ICON_OPTION \
   "$ENTRY_POINT"
 
