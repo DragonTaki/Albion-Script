@@ -4,25 +4,36 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/23
-# Version: v1.4
+# Update Date: 2025/04/25
+# Version: v1.5
 # ----- ----- ----- -----
 
 import os
-from datetime import datetime, timezone, timedelta
 import pickle
+from datetime import datetime, timezone, timedelta
+from enum import Enum
 
-from .config import CacheType, LogLevel, CACHE_EXPIRY_HOURS, CACHE_FOLDER, CACHE_EXTENSION, MAX_CACHE_VERSIONS
-from .logger import log
+from .config.constant import CACHE_EXTENSION
+from .config.settings import CACHE_FOLDER
+from .logger import LogLevel, log
 from .utils import (
     generate_cache_filename,
     get_cache_file_path,
-    get_path,
     get_relative_path_to_target,
     ensure_folder_exists
 )
 
-# Constants
+# Settings for Cache
+CACHE_EXPIRY_HOURS = 8
+MAX_CACHE_VERSIONS = 1
+
+# Constants for Cache
+## Cache Types
+class CacheType(Enum):
+    MEMBERLIST = "memberlist"
+    ATTENDANCE = "attendance"
+    TEXTFILE   = "textfile"
+    SCREENSHOT = "screenshot"
 CACHE_TYPES = [e.value for e in CacheType]
 
 # Save cache as JSON data in binary format
@@ -45,7 +56,7 @@ def save_to_cache(data_dict):
     full_path = get_cache_file_path(filename)
 
     try:
-        ensure_folder_exists(get_path(CACHE_FOLDER))
+        ensure_folder_exists(os.path.abspath(os.path.join(CACHE_FOLDER)))
         with open(full_path, "wb") as f:
             pickle.dump({
                 "timestamp": datetime.now(timezone.utc),
@@ -82,7 +93,7 @@ def save_to_cache_if_needed(cache_type, data, if_save_to_cache, saved_item_name=
 
 # Load the latest valid cache of given type
 def load_from_cache(cache_type):
-    cache_folder_path = get_path(CACHE_FOLDER)
+    cache_folder_path = os.path.abspath(os.path.join(CACHE_FOLDER))
     ensure_folder_exists(cache_folder_path)
 
     cache_files = [
@@ -135,7 +146,7 @@ def load_from_cache(cache_type):
 def cleanup_old_cache_files(cache_type, keep_count):
     types_to_clean = CACHE_TYPES if cache_type == "all" else [cache_type]
     deleted_count = 0
-    cache_folder_path = get_path(CACHE_FOLDER)
+    cache_folder_path = os.path.abspath(os.path.join(CACHE_FOLDER))
     ensure_folder_exists(cache_folder_path)
 
     for ctype in types_to_clean:

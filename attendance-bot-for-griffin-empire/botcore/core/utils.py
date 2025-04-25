@@ -8,23 +8,24 @@
 # Version: v1.2
 # ----- ----- ----- -----
 
+import hashlib
 import os
 import time
-import hashlib
 import sys
 
 from datetime import datetime
 
-from .config import EXTRA_ATTENDANCE_FOLDER_FORMAT
+from .config.constant import TEXTFILE_ENCODING
+from .config.settings import EXTRA_ATTENDANCE_FOLDER_FORMAT
 from .logger import log
 
-# Constants for detecting PyInstaller environment
+# Constants
+## General usage
+DEFAULT_HASH_LENGTH = 16
+
+## Detecting PyInstaller environment
 IS_PACKAGED = hasattr(sys, "_MEIPASS")
 BASE_PATH = sys._MEIPASS if IS_PACKAGED else os.path.abspath(".")
-
-# Constants for general usage
-DEFAULT_ENCODING = "utf-8"
-DEFAULT_HASH_LENGTH = 16
 
 # Ensure a folder exists before using it
 def ensure_folder_exists(folder_path):
@@ -43,14 +44,14 @@ def is_valid_folder_name(folder_name):
 # Generate random filename based on type
 def generate_cache_filename(cache_type):
     """Generate a unique cache filename with prefix"""
-    timestamp = str(time.time()).encode(DEFAULT_ENCODING)
+    timestamp = str(time.time()).encode(TEXTFILE_ENCODING)
     filename_hash = hashlib.sha256(timestamp).hexdigest()[:DEFAULT_HASH_LENGTH]
     return f"{cache_type}_{filename_hash}.cache"
 
 # Construct full path for a cache file
 def get_cache_file_path(filename):
     """Return full path and ensure the cache folder exists"""
-    from .config import CACHE_FOLDER
+    from .config.settings import CACHE_FOLDER
     ensure_folder_exists(CACHE_FOLDER)
     return os.path.join(CACHE_FOLDER, filename)
 

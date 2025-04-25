@@ -4,20 +4,21 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/23
-# Version: v1.4
+# Update Date: 2025/04/25
+# Version: v1.5
 # ----- ----- ----- -----
 
 import csv
 import os
 from datetime import datetime
 
-from .config import CacheType, LogLevel, INTERVALS, MAX_CSV_VERSIONS, REPORT_FOLDER, CSV_EXTENSION, CSV_REPORT_PREFIX, CSV_TIMESTAMP_FORMAT
-from .cache import load_from_cache
-from .logger import log
+from .config.constant import INTERVALS
+from .config.settings import MAX_CSV_VERSIONS, REPORT_FOLDER, CSV_REPORT_PREFIX, CSV_TIMESTAMP_FORMAT, CSV_EXTENSION
+from .cache import CacheType, load_from_cache
+from .logger import LogLevel, log
 from .fetch_guild_members import fetch_guild_members
-from .fetch_attendance import fetch_attendance
-from .utils import get_path, get_relative_path_to_target, ensure_folder_exists
+from .fetch_web_attendance import fetch_web_attendance
+from .utils import get_relative_path_to_target, ensure_folder_exists
 
 # Constants for CSV
 ATTENDANCE_HEADERS = ["7DaysAttendance", "14DaysAttendance", "28DaysAttendance"]
@@ -38,7 +39,7 @@ def fetch_required_data(pure_report=False):
     attendance_map = load_from_cache(CacheType.ATTENDANCE.value)
     if not attendance_map:
         log(f"No valid {CacheType.ATTENDANCE.value} cache found, attempting to fetch from server...", LogLevel.WARN)
-        attendance_map = fetch_attendance()
+        attendance_map = fetch_web_attendance()
         if not attendance_map:
             log("Failed to retrieve attendance data.", LogLevel.ERROR)
             return None, None, None, None
@@ -121,7 +122,7 @@ def generate_report(save_to_csv=False, pure_report=False):
 def write_csv(data_rows):
     timestamp_str = datetime.now().strftime(CSV_TIMESTAMP_FORMAT)
     filename = f"{CSV_REPORT_PREFIX}{timestamp_str}{CSV_EXTENSION}"
-    report_dir = get_path(REPORT_FOLDER)
+    report_dir = os.path.abspath(os.path.join(REPORT_FOLDER))
     ensure_folder_exists(report_dir)
     filepath = os.path.join(report_dir, filename)
 

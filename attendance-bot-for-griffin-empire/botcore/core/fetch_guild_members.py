@@ -4,17 +4,17 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/23
-# Version: v1.1
+# Update Date: 2025/04/25
+# Version: v1.2
 # ----- ----- ----- -----
 
 import requests
 
-from .config import CacheType, LogLevel, GUILD_INFO_LIST
-from .cache import save_to_cache_if_needed
-from .logger import log
+from .config.settings import GUILD_INFO_LIST
+from .cache import CacheType, save_to_cache_if_needed
+from .logger import LogLevel, log
 
-# API constants
+# Constants for Fetch API
 API_BASE_URL = "https://gameinfo-sgp.albiononline.com/api/gameinfo"
 API_ENDPOINT_TEMPLATE = f"{API_BASE_URL}/guilds/{{guild_id}}/members"
 HEADERS = {"Accept": "application/json, text/plain, */*"}

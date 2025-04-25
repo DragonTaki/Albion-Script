@@ -21,21 +21,55 @@ import pytesseract
 import shutil
 from PIL import Image, ImageOps, ImageFilter
 
-from .config import CacheType, LogLevel, DAILY_SUMMARY, TEMP_FOLDER, DATA_FOLDER, DEBUG_FOLDER, DEBUG_MODE, IMAGE_EXTENSIONS, DAYS_LOOKBACK, EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, IMAGE_EXTENSIONS
-from .cache import load_from_cache
+from .config.constant import DAYS_LOOKBACK
+from .config.settings import (
+    IF_DEBUG_MODE, DEBUG_FOLDER, IMAGE_EXTENSIONS,
+    DATA_FOLDER,
+    EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT,
+    TEMP_FOLDER
+)
+from .cache import CacheType, load_from_cache
 from .fetch_guild_members import fetch_guild_members
-from .logger import log
+from .logger import LogLevel, log
 from .utils import get_file_checksum, get_path, ensure_folder_exists
 
+# Settings for Screenshot Processing
+## Debug mode
+AUTO_DELETE_TEMP_FILE = False  # Toggle this to `True` to clean up debug folder
+
+## Screenshot preprossing step 1: enlarge image
+SCALE_FACTOR = 2.0  # Scale factor for enlarging the image
+
+## Screenshot preprossing step 2: matching area
 min_scale = 0.7
 max_scale = 1.9
 step = 0.1
 MATCH_SCALES = np.arange(min_scale, max_scale + step, step).round(2).tolist()
 
-# Constants
-AUTO_DELETE_TEMP_FILE = False  # toggle this to True to clean up debug folder
+class NameRegion:
+    class Offset:
+        X = -166
+        Y = 0
 
-SCALE_FACTOR = 2.0  # Scale factor for enlarging the image
+    class Size:
+        Width = 163
+        Height = 35
+
+class MergeStrategy(Enum):
+    LEFTMOST = "left"
+    MIDDLE = "middle"
+    RIGHTMOST = "right"
+
+## Screenshot preprossing step 3: image preprocessing
+SHARPEN_KERNEL = np.array([
+    [0, -0.2, 0],
+    [-0.2, 2.5, -0.2],
+    [0, -0.2, 0]
+])
+
+## Matching option
+FUZZY_MATCH_THRESHOLD = 75
+
 def enlarge_image(image: Image.Image):
     enlarged_size = (int (image.width * SCALE_FACTOR), int (image.height * SCALE_FACTOR))
     image = image.resize(enlarged_size, Image.LANCZOS)
@@ -60,38 +94,12 @@ def pil_to_cv2_gray(image: Image.Image):
 WORDLIST_TEMP_FILENAME = "temp_wordlist.txt"
 WORDLIST_TEMP_FILE = os.path.join(TEMP_FOLDER, WORDLIST_TEMP_FILENAME)
 ensure_folder_exists(TEMP_FOLDER)
-BUTTON_TEMPLATE_PATH = get_path(DATA_FOLDER, "button.png")
+BUTTON_TEMPLATE_FILENAME = "button.png"
+BUTTON_TEMPLATE_PATH = get_path(DATA_FOLDER, BUTTON_TEMPLATE_FILENAME)
 BUTTON_TEMPLATE_ORIG = Image.open(BUTTON_TEMPLATE_PATH)
 BUTTON_TEMPLATE_ENLARGED = enlarge_image(BUTTON_TEMPLATE_ORIG)
 BUTTON_TEMPLATE_CV2 = pil_to_cv2_gray(BUTTON_TEMPLATE_ENLARGED)
 MAX_VERTICAL_DIFF = 3
-
-class NameRegion:
-    class Offset:
-        X = -166
-        Y = 0
-
-    class Size:
-        Width = 163
-        Height = 35
-
-# Constants for preprocessing
-THRESHOLD_BINARY = 127
-MAX_BINARY_VALUE = 255
-CANNY_EDGE_THRESHOLD = 100
-SHARPEN_KERNEL = np.array([
-    [0, -1, 0],
-    [-1, 5, -1],
-    [0, -1, 0]
-])
-
-# Fuzzy matching threshold
-FUZZY_THRESHOLD = 75
-
-class MergeStrategy(Enum):
-    LEFTMOST = "left"
-    MIDDLE = "middle"
-    RIGHTMOST = "right"
 
 # Tesseract setup
 TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "third-party", "tesseract")
@@ -132,7 +140,7 @@ def save_debug_pictures(images, original_filename, prefix, subfolder=None):
         prefix: Filename prefix to identify image purpose, e.g., 'v0_enlarged'.
         subfolder: Optional. Save to a subfolder under DEBUG_FOLDER if specified.
     """
-    if not DEBUG_MODE:
+    if not IF_DEBUG_MODE:
         return
 
     # Check and strip known image extensions
@@ -363,8 +371,7 @@ def preprocess_v2(image: Image.Image) -> Image.Image:
 def preprocess_v3(image: Image.Image) -> Image.Image:
     gray = np.array(image.convert("L"))
     # Custom sharpening kernel (slightly less aggressive)
-    sharpen_kernel = np.array([[0, -0.2, 0], [-0.2, 2.5, -0.2], [0, -0.2, 0]])  # Moderate sharpening
-    sharpened = cv2.filter2D(gray, -1, sharpen_kernel)
+    sharpened = cv2.filter2D(gray, -1, SHARPEN_KERNEL)
     return Image.fromarray(sharpened)
 
 # New V4: CLAHE (Contrast Limited Adaptive Histogram Equalization) with optimized parameters
@@ -427,7 +434,7 @@ def match_player_names(recognized_names, player_list, version_label):
             best_score = fuzz.ratio(lowered_name, best_match.lower())
             # log(f"[{version_label}] Matching \"{name}\" against \"{best_match}\" (score: {best_score})")
 
-            if best_score > FUZZY_THRESHOLD:
+            if best_score > FUZZY_MATCH_THRESHOLD:
                 matched.append((best_match, version_label))
             else:
                 # log(f"[{version_label}] No match above threshold for \"{name}\" (score: {best_score}).", LogLevel.DEBUG)
@@ -528,7 +535,7 @@ def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
         log(f"Completed folder \"{folder_name}\" with {len(formatted)} player entries.")
 
         meta = {
-            f: get_file_checksum(get_path(folder_path, f))
+            f: get_file_checksum(os.path.abspath(os.path.join(folder_path, f)))
             for f in os.listdir(folder_path)
             if f.lower().endswith(IMAGE_EXTENSIONS)
         }

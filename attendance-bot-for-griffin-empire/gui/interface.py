@@ -343,7 +343,7 @@ class AttendanceBotGUI(tk.Tk):
     def test_task(self):
         log("Testing...")
         try:
-            result = debug_crop_regions_by_template()
+            result = None
             log(f"Testing done. Return: {result}.")
         except Exception as e:
             log(f"Testing failed: {e}", LogLevel.ERROR)

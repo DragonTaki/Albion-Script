@@ -10,10 +10,12 @@
 
 import requests
 from datetime import datetime
+import atexit
 
 from gui.interface import AttendanceBotGUI
 from gui.trial_interface import show_trial_expired_warning, show_trial_notice
 from botcore.config import TRIAL_VERSION, EXPIRE_DATE
+from botcore.log import shutdown_runtime_log
 
 def get_network_datetime() -> datetime | None:
     try:
@@ -47,6 +49,9 @@ def main():
             return
         else:
             show_trial_notice()
+
+    atexit.register(shutdown_runtime_log)
+
     app = AttendanceBotGUI()
     app.mainloop()
 

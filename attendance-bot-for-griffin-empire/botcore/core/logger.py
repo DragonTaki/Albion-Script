@@ -4,21 +4,46 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/23
-# Version: v1.2
+# Update Date: 2025/04/25
+# Version: v1.3
 # ----- ----- ----- -----
 
-from datetime import datetime
 import json
+from datetime import datetime
+from enum import Enum
 
-from .config import LogLevel, DEBUG_MODE, TIMESTAMP_FORMAT
+from .config.settings import IF_DEBUG_MODE
 
 external_logger = None  # GUI logger callback
 
+# Logger Time Formats
+TIMESTAMP_FORMAT = "%d/%m/%Y %H:%M:%S"
+
+# Logger Levels
+class LogLevel(Enum):
+    INIT  = ("init",  None)  # No color for init
+    DEBUG = ("debug", "gray")
+    INFO  = ("info",  "white")
+    WARN  = ("warn",  "yellow")
+    ERROR = ("error", "red")
+
+    def __init__(self, label, color):
+        self._label = label
+        self._color = color
+
+    @property
+    def label(self) -> str:
+        # Always return uppercase label like INIT, INFO, etc.
+        return self._label.upper()
+
+    @property
+    def color(self) -> str | None:
+        return self._color
+
 # Default color mapping
 LEVEL_COLOR_MAP = {
-    "info": "white",
-    "warn": "yellow",
+    "info" : "white",
+    "warn" : "yellow",
     "error": "red"
 }
 
@@ -28,7 +53,7 @@ def set_external_logger(callback_fn):
 
 # Main function to log messages
 def log(message, level=LogLevel.INFO):
-    if level == LogLevel.DEBUG and not DEBUG_MODE:
+    if level == LogLevel.DEBUG and not IF_DEBUG_MODE:
         return
 
     level_str = level.label

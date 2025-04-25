@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/23
-# Update Date: 2025/04/23
-# Version: v1.0
+# Update Date: 2025/04/25
+# Version: v1.1
 # ----- ----- ----- -----
 
 import json
@@ -14,11 +14,26 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from collections import Counter
 
-from .config import LogLevel, DAILY_SUMMARY, EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, INTERVALS, DAYS_LOOKBACK, TEXT_EXTENSIONS, FORCE_NEW_DAILY_SUMMARY
-from .logger import log
+from .config.constant import INTERVALS, DAYS_LOOKBACK
+from .config.settings import EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, IF_FORCE_NEW_DAILY_SUMMARY, TEXT_EXTENSIONS
+from .logger import LogLevel, log
 from .process_textfile import parse_txt_file
 from .process_screenshot import parse_screenshot_file, get_valid_player_list, create_word_list_file
-from .utils import ensure_folder_exists, get_file_checksum, get_path, get_relative_path_to_target, is_valid_folder_name
+from .utils import ensure_folder_exists, get_file_checksum, get_relative_path_to_target, is_valid_folder_name
+
+# Constants for Daily Summary
+FILENAME_TEMPLATE = "{prefix}{name}{ext}"
+
+DAILY_SUMMARY = SimpleNamespace(
+    TEXTFILE = SimpleNamespace(
+        META    = FILENAME_TEMPLATE.format(prefix="text_", name="meta",    ext=".meta"),
+        SUMMARY = FILENAME_TEMPLATE.format(prefix="text_", name="summary", ext=".json"),
+    ),
+    SCREENSHOT = SimpleNamespace(
+        META    = FILENAME_TEMPLATE.format(prefix="screenshot_", name="meta",    ext=".meta"),
+        SUMMARY = FILENAME_TEMPLATE.format(prefix="screenshot_", name="summary", ext=".json"),
+    )
+)
 
 def save_daily_summary(summary_type: SimpleNamespace, folder_name: str, attendance_list: list[dict], meta: dict) -> list[dict]:
     """
@@ -63,7 +78,7 @@ def collect_all_daily_attendance(summary_type: SimpleNamespace):
         except ValueError:
             continue
 
-        if FORCE_NEW_DAILY_SUMMARY or not check_daily_summary(summary_type, folder_path):
+        if IF_FORCE_NEW_DAILY_SUMMARY or not check_daily_summary(summary_type, folder_path):
             log(f"Summary not found in \"{folder_name}\", attempting parse...", LogLevel.DEBUG)
 
             if summary_type == DAILY_SUMMARY.TEXTFILE:
