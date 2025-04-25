@@ -12,7 +12,7 @@ import json
 from datetime import datetime
 from enum import Enum
 
-from .config.settings import IF_DEBUG_MODE
+from botcore.config.settings import IF_DEBUG_MODE
 
 external_logger = None  # GUI logger callback
 

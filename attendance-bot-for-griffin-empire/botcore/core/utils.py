@@ -15,8 +15,8 @@ import sys
 
 from datetime import datetime
 
-from .config.constant import TEXTFILE_ENCODING
-from .config.settings import EXTRA_ATTENDANCE_FOLDER_FORMAT
+from botcore.config.constant import CONSTANTS, TEXTFILE_ENCODING
+DATETIME_FORMATS = CONSTANTS.DATETIME_FORMATS
 from .logger import log
 
 # Constants
@@ -36,7 +36,7 @@ def ensure_folder_exists(folder_path):
 def is_valid_folder_name(folder_name):
     try:
         # Try to parse the folder name to see if it matches the date format
-        datetime.strptime(folder_name, EXTRA_ATTENDANCE_FOLDER_FORMAT)
+        datetime.strptime(folder_name, DATETIME_FORMATS.folder)
         return True
     except ValueError:
         return False
@@ -51,7 +51,7 @@ def generate_cache_filename(cache_type):
 # Construct full path for a cache file
 def get_cache_file_path(filename):
     """Return full path and ensure the cache folder exists"""
-    from .config.settings import CACHE_FOLDER
+    from botcore.config.settings import CACHE_FOLDER
     ensure_folder_exists(CACHE_FOLDER)
     return os.path.join(CACHE_FOLDER, filename)
 

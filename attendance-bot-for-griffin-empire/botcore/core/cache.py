@@ -13,8 +13,9 @@ import pickle
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
-from .config.constant import CACHE_EXTENSION
-from .config.settings import CACHE_FOLDER
+from botcore.config.constant import CONSTANTS
+EXTENSIONS = CONSTANTS.EXTENSIONS
+from botcore.config.settings import CACHE_FOLDER
 from .logger import LogLevel, log
 from .utils import (
     generate_cache_filename,
@@ -42,14 +43,14 @@ def save_to_cache(data_dict):
         log("Cache data must be a dictionary.", LogLevel.ERROR)
         return
 
-    required_keys = {"type", "json_data"}
+    required_keys = {"timestamp", "type", "json_data"}
     if not required_keys.issubset(data_dict):
-        log(f"Cache data missing required keys: {required_keys}.", LogLevel.ERROR)
+        log(f"Cache data missing required keys: '{required_keys}'", LogLevel.ERROR)
         return
 
     cache_type = data_dict["type"]
     if cache_type not in CACHE_TYPES:
-        log(f"Unsupported cache type: {cache_type}.", LogLevel.ERROR)
+        log(f"Unsupported cache type: '{cache_type}'", LogLevel.ERROR)
         return
 
     filename = generate_cache_filename(cache_type)
@@ -83,6 +84,7 @@ def save_to_cache_if_needed(cache_type, data, if_save_to_cache, saved_item_name=
     if if_save_to_cache:
         if data:
             cache_data = {
+                "timestamp": datetime.now(timezone.utc),
                 "type": cache_type.value,
                 "json_data": data
             }
@@ -98,7 +100,7 @@ def load_from_cache(cache_type):
 
     cache_files = [
         f for f in os.listdir(cache_folder_path)
-        if f.endswith(CACHE_EXTENSION) and f.startswith(f"{cache_type}_")
+        if f.endswith(EXTENSIONS.cache) and f.startswith(f"{cache_type}_")
     ]
     latest_valid = None
     latest_valid_file = None
@@ -119,7 +121,7 @@ def load_from_cache(cache_type):
 
             if data_type != cache_type:
                 os.remove(full_path)
-                log(f"Inconsistent type in \"{fname}\" (found: {data_type}), file removed.", LogLevel.WARN)
+                log(f"Inconsistent type in file \"{fname}\" (found: '{data_type}'), file removed.", LogLevel.WARN)
                 continue
 
             if datetime.now(timezone.utc) - ctime >= timedelta(hours=CACHE_EXPIRY_HOURS):
@@ -133,11 +135,11 @@ def load_from_cache(cache_type):
 
         except Exception as e:
             os.remove(get_cache_file_path(fname))
-            log(f"Invalid cache file \"{fname}\" removed due to error: {e}", LogLevel.WARN)
+            log(f"Invalid cache file \"{fname}\", removed due to error: {e}", LogLevel.WARN)
 
     if latest_valid:
         relative_path = get_relative_path_to_target(latest_valid_file)
-        log(f"Valid \"{relative_path}\" {cache_type} cache loaded.")
+        log(f"Success loaded \"{relative_path}\" {cache_type} cache.")
         return latest_valid["json_data"]
 
     return None
@@ -151,13 +153,13 @@ def cleanup_old_cache_files(cache_type, keep_count):
 
     for ctype in types_to_clean:
         if ctype not in CACHE_TYPES:
-            log(f"Invalid cache type for cleanup: {ctype}", LogLevel.ERROR)
+            log(f"Invalid cache type for cleanup: '{ctype}'", LogLevel.ERROR)
             continue
 
         try:
             all_files = [
                 f for f in os.listdir(cache_folder_path)
-                if f.startswith(f"{ctype}_") and f.endswith(CACHE_EXTENSION)
+                if f.startswith(f"{ctype}_") and f.endswith(EXTENSIONS.cache)
             ]
             full_paths = [
                 (get_cache_file_path(f), os.path.getmtime(get_cache_file_path(f)))
@@ -172,7 +174,7 @@ def cleanup_old_cache_files(cache_type, keep_count):
                 log(f"Removed old cache: \"{relative_path}\".", LogLevel.WARN)
                 deleted_count += 1
         except Exception as e:
-            log(f"Error during cache cleanup: {e}.", LogLevel.ERROR)
+            log(f"Error during cache cleanup: {e}", LogLevel.ERROR)
 
     return deleted_count
 

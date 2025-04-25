@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/23
-# Version: v2.0
+# Update Date: 2025/04/25
+# Version: v2.1
 # ----- ----- ----- -----
 
 import os
@@ -21,13 +21,15 @@ import pytesseract
 import shutil
 from PIL import Image, ImageOps, ImageFilter
 
-from .config.constant import DAYS_LOOKBACK
-from .config.settings import (
-    IF_DEBUG_MODE, DEBUG_FOLDER, IMAGE_EXTENSIONS,
+from botcore.config.constant import CONSTANTS, DAYS_LOOKBACK, TEXTFILE_ENCODING
+from botcore.config.settings import (
+    IF_DEBUG_MODE, DEBUG_FOLDER,
     DATA_FOLDER,
-    EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT,
+    EXTRA_ATTENDANCE_FOLDER,
     TEMP_FOLDER
 )
+EXTENSIONS = CONSTANTS.EXTENSIONS
+DATETIME_FORMATS = CONSTANTS.DATETIME_FORMATS
 from .cache import CacheType, load_from_cache
 from .fetch_guild_members import fetch_guild_members
 from .logger import LogLevel, log
@@ -102,14 +104,14 @@ BUTTON_TEMPLATE_CV2 = pil_to_cv2_gray(BUTTON_TEMPLATE_ENLARGED)
 MAX_VERTICAL_DIFF = 3
 
 # Tesseract setup
-TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "third-party", "tesseract")
+TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "third-party", "tesseract")
 TESSERACT_EXEC = os.path.join(TESSERACT_DIR, "tesseract.exe")
 TESSDATA_DIR = os.path.join(TESSERACT_DIR, "tessdata")
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_EXEC
 os.environ["TESSDATA_PREFIX"] = TESSDATA_DIR
 
 def create_word_list_file(player_list):
-    with open(WORDLIST_TEMP_FILE, "w", encoding="utf-8") as f:
+    with open(WORDLIST_TEMP_FILE, "w", encoding=TEXTFILE_ENCODING) as f:
         for name in player_list:
             f.write(name + "\n")
     return WORDLIST_TEMP_FILE
@@ -145,7 +147,7 @@ def save_debug_pictures(images, original_filename, prefix, subfolder=None):
 
     # Check and strip known image extensions
     base_name, ext = os.path.splitext(original_filename)
-    if ext.lower() in IMAGE_EXTENSIONS:
+    if ext.lower() in EXTENSIONS.image:
         name_without_ext = base_name
     else:
         name_without_ext = original_filename
@@ -184,7 +186,7 @@ def clear_debug_folder():
     for root, dirs, files in os.walk(DEBUG_FOLDER, topdown=False):  # Walk in reverse to delete files first
         for file in files:
             # Only delete image files
-            if file.lower().endswith(IMAGE_EXTENSIONS):
+            if file.lower().endswith(EXTENSIONS.image):
                 file_path = os.path.join(root, file)
                 try:
                     os.remove(file_path)
@@ -451,7 +453,7 @@ def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
 
     folder_path = os.path.join(EXTRA_ATTENDANCE_FOLDER, folder_name)
     try:
-        folder_date = datetime.strptime(folder_name, EXTRA_ATTENDANCE_FOLDER_FORMAT)
+        folder_date = datetime.strptime(folder_name, DATETIME_FORMATS.folder)
     except ValueError:
         return None, None
 
@@ -464,7 +466,7 @@ def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
     has_valid_image = False
 
     for file in os.listdir(folder_path):
-        if not file.lower().endswith(IMAGE_EXTENSIONS):
+        if not file.lower().endswith(EXTENSIONS.image):
             continue
 
         full_path = os.path.join(folder_path, file)
@@ -537,7 +539,7 @@ def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
         meta = {
             f: get_file_checksum(os.path.abspath(os.path.join(folder_path, f)))
             for f in os.listdir(folder_path)
-            if f.lower().endswith(IMAGE_EXTENSIONS)
+            if f.lower().endswith(EXTENSIONS.image)
         }
 
         attendance_list = [

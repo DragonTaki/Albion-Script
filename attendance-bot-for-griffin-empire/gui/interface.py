@@ -14,16 +14,15 @@ import tkinter as tk
 from tkinter import font
 
 # Modular imports
-from botcore.config import LogLevel
-from botcore.fetch_web_attendance import fetch_web_attendance
-from botcore.fetch_guild_members import fetch_guild_members
-from botcore.fetch_textfile_attendance import fetch_textfile_attendance
-from botcore.fetch_screenshot_attendance import fetch_screenshot_attendance
-from botcore.generate_report import generate_report
-from botcore.cache import clear_all_cache_files
-from botcore.daily_summary import clear_all_daily_summary_files
-from botcore.log import append_runtime_log, save_log, save_all_logs, clear_log
-from botcore.logger import log, set_external_logger, log_welcome_message
+from botcore.core.fetch_web_attendance import fetch_web_attendance
+from botcore.core.fetch_guild_members import fetch_guild_members
+from botcore.core.fetch_textfile_attendance import fetch_textfile_attendance
+from botcore.core.fetch_screenshot_attendance import fetch_screenshot_attendance
+from botcore.core.generate_report import generate_report
+from botcore.core.cache import clear_all_cache_files
+from botcore.core.daily_summary import clear_all_daily_summary_files
+from botcore.core.log import append_runtime_log, save_log, save_all_logs, clear_log
+from botcore.core.logger import LogLevel, log, set_external_logger, log_welcome_message
 
 # Define constant values for configuration
 BG_COLOR = "#08192D"

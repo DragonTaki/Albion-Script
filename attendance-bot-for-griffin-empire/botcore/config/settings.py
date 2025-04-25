@@ -14,7 +14,7 @@ GUILD_INFO_LIST = [
 ]
 
 # Date Time Main Format
-DATE_ORDER = ["%Y", "%m", "%d"]
+DATE_ORDER = ["%d", "%m", "%Y"]
 
 # Folder Paths
 CACHE_FOLDER = "cache"

@@ -12,8 +12,10 @@ import csv
 import os
 from datetime import datetime
 
-from .config.constant import INTERVALS
-from .config.settings import MAX_CSV_VERSIONS, REPORT_FOLDER, CSV_REPORT_PREFIX, CSV_TIMESTAMP_FORMAT, CSV_EXTENSION
+from botcore.config.constant import CONSTANTS, INTERVALS, TEXTFILE_ENCODING
+from botcore.config.settings import MAX_CSV_VERSIONS, REPORT_FOLDER, CSV_REPORT_PREFIX
+EXTENSIONS = CONSTANTS.EXTENSIONS
+DATETIME_FORMATS = CONSTANTS.DATETIME_FORMATS
 from .cache import CacheType, load_from_cache
 from .logger import LogLevel, log
 from .fetch_guild_members import fetch_guild_members
@@ -120,8 +122,8 @@ def generate_report(save_to_csv=False, pure_report=False):
 
 # Save data to CSV and clean up old ones
 def write_csv(data_rows):
-    timestamp_str = datetime.now().strftime(CSV_TIMESTAMP_FORMAT)
-    filename = f"{CSV_REPORT_PREFIX}{timestamp_str}{CSV_EXTENSION}"
+    timestamp_str = datetime.now().strftime(DATETIME_FORMATS.csv)
+    filename = f"{CSV_REPORT_PREFIX}{timestamp_str}{EXTENSIONS.csv}"
     report_dir = os.path.abspath(os.path.join(REPORT_FOLDER))
     ensure_folder_exists(report_dir)
     filepath = os.path.join(report_dir, filename)
@@ -129,7 +131,7 @@ def write_csv(data_rows):
     fieldnames = ["Player"] + ATTENDANCE_HEADERS
 
     try:
-        with open(filepath, mode="w", newline="", encoding="utf-8") as file:
+        with open(filepath, mode="w", newline="", encoding=TEXTFILE_ENCODING) as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(data_rows)
@@ -146,7 +148,7 @@ def delete_old_csvs(report_dir):
     """Delete old CSV files in the report directory, keeping only the most recent N versions"""
     try:
         csv_files = sorted(
-            [f for f in os.listdir(report_dir) if f.startswith(CSV_REPORT_PREFIX) and f.endswith(CSV_EXTENSION)],
+            [f for f in os.listdir(report_dir) if f.startswith(CSV_REPORT_PREFIX) and f.endswith(EXTENSIONS.csv)],
             key=lambda x: os.path.getmtime(os.path.join(report_dir, x)),
             reverse=True
         )

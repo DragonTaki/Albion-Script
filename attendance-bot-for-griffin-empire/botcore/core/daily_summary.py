@@ -14,8 +14,10 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from collections import Counter
 
-from .config.constant import INTERVALS, DAYS_LOOKBACK
-from .config.settings import EXTRA_ATTENDANCE_FOLDER, EXTRA_ATTENDANCE_FOLDER_FORMAT, IF_FORCE_NEW_DAILY_SUMMARY, TEXT_EXTENSIONS
+from botcore.config.constant import CONSTANTS, INTERVALS, DAYS_LOOKBACK, TEXTFILE_ENCODING
+from botcore.config.settings import EXTRA_ATTENDANCE_FOLDER, IF_FORCE_NEW_DAILY_SUMMARY
+EXTENSIONS = CONSTANTS.EXTENSIONS
+DATETIME_FORMATS = CONSTANTS.DATETIME_FORMATS
 from .logger import LogLevel, log
 from .process_textfile import parse_txt_file
 from .process_screenshot import parse_screenshot_file, get_valid_player_list, create_word_list_file
@@ -50,9 +52,9 @@ def save_daily_summary(summary_type: SimpleNamespace, folder_name: str, attendan
     try:
         ensure_folder_exists(folder_path)
 
-        with open(summary_path, "w", encoding="utf-8") as f:
+        with open(summary_path, "w", encoding=TEXTFILE_ENCODING) as f:
             json.dump(attendance_list, f, indent=2, ensure_ascii=False)
-        with open(meta_path, "w", encoding="utf-8") as f:
+        with open(meta_path, "w", encoding=TEXTFILE_ENCODING) as f:
             json.dump(meta, f, indent=2, ensure_ascii=False)
 
         log(f"Saved summary and meta to \"{folder_name}\".")
@@ -74,7 +76,7 @@ def collect_all_daily_attendance(summary_type: SimpleNamespace):
         if not os.path.isdir(folder_path):
             continue
         try:
-            datetime.strptime(folder_name, EXTRA_ATTENDANCE_FOLDER_FORMAT)
+            datetime.strptime(folder_name, DATETIME_FORMATS.folder)
         except ValueError:
             continue
 
@@ -82,7 +84,7 @@ def collect_all_daily_attendance(summary_type: SimpleNamespace):
             log(f"Summary not found in \"{folder_name}\", attempting parse...", LogLevel.DEBUG)
 
             if summary_type == DAILY_SUMMARY.TEXTFILE:
-                txt_files = [f for f in os.listdir(folder_path) if f.endswith(TEXT_EXTENSIONS)]
+                txt_files = [f for f in os.listdir(folder_path) if f.endswith(EXTENSIONS.text)]
                 if not txt_files:
                     log(f"No .txt file found in \"{folder_name}\".", LogLevel.WARN)
                     continue
@@ -132,7 +134,7 @@ def check_daily_summary(summary_type: SimpleNamespace, folder_path: str):
         return False
 
     try:
-        with open(meta_path, "r", encoding="utf-8") as f:
+        with open(meta_path, "r", encoding=TEXTFILE_ENCODING) as f:
             recorded_meta = json.load(f)
 
         for filename, old_checksum in recorded_meta.items():
@@ -158,9 +160,9 @@ def load_daily_summary(summary_type: SimpleNamespace, folder_name: str) -> tuple
         return None, None
 
     try:
-        with open(summary_path, "r", encoding="utf-8") as f:
+        with open(summary_path, "r", encoding=TEXTFILE_ENCODING) as f:
             summary = json.load(f)
-        with open(meta_path, "r", encoding="utf-8") as f:
+        with open(meta_path, "r", encoding=TEXTFILE_ENCODING) as f:
             meta = json.load(f)
         return summary, meta
     except Exception as e:
@@ -178,7 +180,7 @@ def calculate_interval_summary(summary_type: SimpleNamespace, result_by_day: dic
 
     for i in range(DAYS_LOOKBACK):
         date = today - timedelta(days=i)
-        folder_name = date.strftime(EXTRA_ATTENDANCE_FOLDER_FORMAT)
+        folder_name = date.strftime(DATETIME_FORMATS.folder)
 
         summary, _ = load_daily_summary(summary_type, folder_name)
         if summary is None:
