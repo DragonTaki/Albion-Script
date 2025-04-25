@@ -46,6 +46,7 @@ def save_daily_summary(summary_type: SimpleNamespace, folder_name: str, attendan
 
     try:
         ensure_folder_exists(folder_path)
+
         with open(summary_path, "w", encoding=TEXTFILE_ENCODING) as f:
             json.dump(attendance_list, f, indent=2, ensure_ascii=False)
         with open(meta_path, "w", encoding=TEXTFILE_ENCODING) as f:
