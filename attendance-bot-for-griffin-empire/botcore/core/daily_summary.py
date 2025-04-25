@@ -16,6 +16,7 @@ from collections import Counter
 
 from botcore.config.constant import EXTENSIONS, DATETIME_FORMATS, INTERVALS, DAYS_LOOKBACK, TEXTFILE_ENCODING
 from botcore.config.settings import FOLDER_PATHS, IF_FORCE_NEW_DAILY_SUMMARY
+from .cache import CacheType
 from .logger import LogLevel, log
 from .process_textfile import parse_txt_file
 from .process_screenshot import parse_screenshot_file, get_valid_player_list, create_word_list_file
@@ -28,17 +29,28 @@ DAILY_SUMMARY = SimpleNamespace(
     TEXTFILE=SimpleNamespace(
         META=FILENAME_TEMPLATE.format(prefix="text_", name="meta", ext=".meta"),
         SUMMARY=FILENAME_TEMPLATE.format(prefix="text_", name="summary", ext=".json"),
+        cache_type=CacheType.TEXTFILE
     ),
     SCREENSHOT=SimpleNamespace(
         META=FILENAME_TEMPLATE.format(prefix="screenshot_", name="meta", ext=".meta"),
         SUMMARY=FILENAME_TEMPLATE.format(prefix="screenshot_", name="summary", ext=".json"),
+        cache_type=CacheType.SCREENSHOT
     )
 )
 
 # ----- External: Save Daily Summary ----- #
 def save_daily_summary(summary_type: SimpleNamespace, folder_name: str, attendance_list: list[dict], meta: dict) -> list[dict]:
     """
-    Save daily attendance and meta into designated summary and meta file.
+    Save daily attendance summary and metadata into JSON files.
+
+    Args:
+        summary_type (SimpleNamespace): Target summary file structure (text or screenshot).
+        folder_name (str): Target attendance folder name (formatted as YYYY-MM-DD).
+        attendance_list (list[dict]): List of player attendance records.
+        meta (dict): Metadata mapping input file names to checksums.
+
+    Returns:
+        list[dict]: The saved attendance list.
     """
     folder_path = os.path.join(FOLDER_PATHS.attendance, folder_name)
     summary_path = os.path.join(folder_path, summary_type.SUMMARY)
@@ -59,6 +71,16 @@ def save_daily_summary(summary_type: SimpleNamespace, folder_name: str, attendan
 
 # ----- Internal: Verify Summary Validity ----- #
 def _check_summary_valid(summary_type: SimpleNamespace, folder_path: str) -> bool:
+    """
+    Check if summary and meta files exist and match the source file checksums.
+
+    Args:
+        summary_type (SimpleNamespace): Type of summary (text or screenshot).
+        folder_path (str): Absolute path to the daily attendance folder.
+
+    Returns:
+        bool: True if summary is valid and up to date, False otherwise.
+    """
     summary_path = os.path.join(folder_path, summary_type.SUMMARY)
     meta_path = os.path.join(folder_path, summary_type.META)
 
@@ -78,8 +100,22 @@ def _check_summary_valid(summary_type: SimpleNamespace, folder_path: str) -> boo
         log(f"Failed to verify summary integrity at \"{folder_path}\": {e}.", LogLevel.ERROR)
         return False
 
+def _get_summary_type_name(summary_type: SimpleNamespace) -> str:
+    return summary_type.__class__.__name__.upper()
+
+
 # ----- External: Load Existing Summary ----- #
 def load_daily_summary(summary_type: SimpleNamespace, folder_name: str) -> tuple[list[dict] | None, dict | None]:
+    """
+    Load saved daily summary and meta from disk.
+
+    Args:
+        summary_type (SimpleNamespace): Type of summary to load.
+        folder_name (str): Folder name containing the summary.
+
+    Returns:
+        tuple: (attendance list, meta dict), or (None, None) if loading fails.
+    """
     folder_path = os.path.join(FOLDER_PATHS.attendance, folder_name)
     summary_path = os.path.join(folder_path, summary_type.SUMMARY)
     meta_path = os.path.join(folder_path, summary_type.META)
@@ -94,11 +130,25 @@ def load_daily_summary(summary_type: SimpleNamespace, folder_name: str) -> tuple
             meta = json.load(f)
         return summary, meta
     except Exception as e:
-        log(f"Failed to load \"{summary_type}\" cache from \"{folder_path}\": {e}.", LogLevel.ERROR)
+        log(f"Failed to load \"{_get_summary_type_name(summary_type)}\" cache from \"{folder_path}\": {e}.", LogLevel.ERROR)
         return None, None
 
 # ----- External: Collect All Daily Summary (Auto Parse) ----- #
 def collect_all_daily_attendance(summary_type: SimpleNamespace) -> dict[str, list[dict]]:
+    """
+    Automatically collect all daily attendance data.
+
+    - For each folder in the attendance directory:
+        - Verify if summary is present and valid.
+        - If not, parse raw data and save new summary.
+    - Screenshot mode requires player name list and word list file.
+
+    Args:
+        summary_type (SimpleNamespace): Type of summary (text or screenshot).
+
+    Returns:
+        dict[str, list[dict]]: Mapping from folder name to attendance records.
+    """
     result_by_day = {}
     player_list = []
     wordlist_path = None
@@ -161,6 +211,16 @@ def collect_all_daily_attendance(summary_type: SimpleNamespace) -> dict[str, lis
 
 # ----- External: Calculate Summary for Intervals ----- #
 def calculate_interval_summary(summary_type: SimpleNamespace, result_by_day: dict[str, list[dict]]) -> dict[int, dict[str, int]]:
+    """
+    Aggregate attendance into 7/14/28-day intervals.
+
+    Args:
+        summary_type (SimpleNamespace): Summary type (unused but retained for future use).
+        result_by_day (dict): Daily attendance mapping from folder to summary list.
+
+    Returns:
+        dict[int, dict[str, int]]: Mapping from interval (7/14/28) to player attendance counts.
+    """
     today = datetime.today()
     summary_by_interval = {i: {} for i in INTERVALS}
 
@@ -186,6 +246,15 @@ def calculate_interval_summary(summary_type: SimpleNamespace, result_by_day: dic
 
 # ----- External: Cleanup Old Summary Files ----- #
 def cleanup_old_daily_summary_files(keep_count: int) -> int:
+    """
+    Delete old summary/meta files, retaining only the most recent `keep_count` per day.
+
+    Args:
+        keep_count (int): Number of recent files to keep per day.
+
+    Returns:
+        int: Total number of files deleted.
+    """
     deleted_count = 0
     attendance_folders = list_dirs_sorted_by_date(FOLDER_PATHS.attendance)
 
@@ -216,4 +285,10 @@ def cleanup_old_daily_summary_files(keep_count: int) -> int:
 
 # ----- External: Clear All Summary Files ----- #
 def clear_all_daily_summary_files() -> int:
+    """
+    Delete all summary and meta files in attendance folders.
+
+    Returns:
+        int: Total number of files deleted.
+    """
     return cleanup_old_daily_summary_files(keep_count=0)

@@ -26,6 +26,9 @@ external_logger: Callable[[str], None] | None = None
 
 # ----- Log Level Enum ----- #
 class LogLevel(Enum):
+    """
+    Enum for different log levels, each associated with a label and color.
+    """
     INIT  = ("init",  None)      # No color for init
     DEBUG = ("debug", "gray")
     INFO  = ("info",  "white")
@@ -33,33 +36,63 @@ class LogLevel(Enum):
     ERROR = ("error", "red")
 
     def __init__(self, label: str, color: str | None):
+        """
+        Initialize a LogLevel instance with a label and color.
+
+        Args:
+            label (str): The label for the log level (e.g., 'info', 'error').
+            color (str | None): The associated color for the log level (e.g., 'white', 'red').
+        """
         self._label = label
         self._color = color
 
     @property
     def label(self) -> str:
-        """Return uppercased label, e.g., INFO, ERROR"""
+        """
+        Return the uppercase label of the log level (e.g., INFO, ERROR).
+
+        Returns:
+            str: The log level label in uppercase.
+        """
         return self._label.upper()
 
     @property
     def color(self) -> str | None:
-        """Return associated display color"""
+        """
+        Return the associated display color for the log level.
+
+        Returns:
+            str | None: The color for display, or None if no color is set.
+        """
         return self._color
 
 
 # ----- Dataclass for a Log Record ----- #
 @dataclass
 class LogRecord:
+    """
+    A log record representing a single log entry with message, level, and timestamp.
+    """
     message: str
     level: LogLevel
     timestamp: str = datetime.now().strftime(DATETIME_FORMATS.general)
 
     def to_text(self) -> str:
-        """Format log record for console"""
+        """
+        Convert the log record to a plain text format.
+
+        Returns:
+            str: A formatted string representation of the log record.
+        """
         return f"{self.timestamp} [{self.level.label}] {self.message}"
 
     def to_json(self) -> str:
-        """Format log record for GUI JSON logger"""
+        """
+        Convert the log record to a JSON format for GUI display.
+
+        Returns:
+            str: A JSON string representing the log record.
+        """
         return json.dumps({
             "text" : self.to_text(),
             "color": self.level.color or DEFAULT_LOG_COLOR,
@@ -69,13 +102,24 @@ class LogRecord:
 
 # ----- Main logger API ----- #
 def set_external_logger(callback_fn: Callable[[str], None]) -> None:
-    """Assign GUI log callback for external logging"""
+    """
+    Assign a callback function for logging to an external GUI.
+
+    Args:
+        callback_fn (Callable[[str], None]): A function that accepts a string (log message in JSON format) to display in the GUI.
+    """
     global external_logger
     external_logger = callback_fn
 
 
 def log(message: str, level: LogLevel = LogLevel.INFO) -> None:
-    """Log to console and optionally to GUI if callback is set"""
+    """
+    Log a message to the console and optionally to an external GUI if the callback is set.
+
+    Args:
+        message (str): The message to log.
+        level (LogLevel): The severity level of the log (default is INFO).
+    """
     if level == LogLevel.DEBUG and not IF_DEBUG_MODE:
         return
 
@@ -91,7 +135,11 @@ def log(message: str, level: LogLevel = LogLevel.INFO) -> None:
 
 # ----- GUI Welcome Message ----- #
 def log_welcome_message() -> None:
-    """Send colored rainbow-style welcome message to GUI"""
+    """
+    Send a rainbow-colored welcome message to the external GUI.
+
+    This includes a welcome message and the author's name.
+    """
     if not external_logger:
         return
 

@@ -4,14 +4,15 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/25
-# Version: v1.5
+# Update Date: 2025/04/26
+# Version: v1.6
 # ----- ----- ----- -----
 
 import os
 import pickle
 from datetime import datetime, timezone, timedelta
 from enum import Enum
+from typing import Any
 
 from botcore.config.constant import EXTENSIONS
 from botcore.config.settings import FOLDER_PATHS
@@ -38,28 +39,71 @@ CACHE_TYPES = [e.value for e in CacheType]
 
 # ----- Internal Helpers -----
 def _is_valid_cache_structure(data: dict) -> bool:
-    """Check if cache dict contains required keys."""
+    """
+    Check whether a dictionary follows the expected cache format.
+    
+    This function verifies that the provided dictionary contains the required keys 
+    for the cache structure. The expected keys are: {"timestamp", "type", "json_data"}.
+
+    Args:
+        data (dict): The dictionary to be validated.
+
+    Returns:
+        bool: True if the dictionary contains the required keys, False otherwise.
+    """
     required_keys = {"timestamp", "type", "json_data"}
     return isinstance(data, dict) and required_keys.issubset(data)
 
 def _is_cache_expired(timestamp: datetime) -> bool:
-    """Determine if cache is expired."""
+    """
+    Determine whether a cache timestamp is expired based on configured expiry hours.
+    
+    This function checks if the provided cache timestamp exceeds the configured expiration 
+    period (in hours). If the timestamp is older than the configured expiry time, it returns True, 
+    indicating that the cache is expired.
+
+    Args:
+        timestamp (datetime): The timestamp to be checked for expiry.
+
+    Returns:
+        bool: True if the cache is expired, False otherwise.
+    """
     return datetime.now(timezone.utc) - timestamp >= timedelta(hours=CACHE_EXPIRY_HOURS)
 
-def _remove_file_safely(file_path: str, reason: str = ""):
-    """Attempt to remove a file and log if necessary."""
+def _remove_file_safely(file_path: str, reason: str = "") -> None:
+    """
+    Attempt to delete a file and log the action with a reason or any encountered error.
+    
+    This function tries to delete the specified file and logs the action. 
+    If the deletion is successful, it logs the reason (if provided). 
+    If the deletion fails, it logs an error with the exception message.
+
+    Args:
+        file_path (str): The absolute path to the file to be deleted.
+        reason (str, optional): The reason for file removal. Defaults to an empty string, 
+                                which indicates no specific reason.
+
+    Returns:
+        None
+    """
     try:
         os.remove(file_path)
         if reason:
             log(f"Removed file '{file_path}' due to {reason}.", LogLevel.WARN)
+        else:
+            log(f"Removed file '{file_path}'.", LogLevel.WARN)
     except Exception as e:
         log(f"Failed to remove '{file_path}': {e}", LogLevel.ERROR)
 
+
 # ----- Save to Cache -----
-def save_to_cache(data_dict: dict):
+def save_to_cache(data_dict: dict) -> None:
     """
-    Save dictionary data to a binary cache file.
-    Expected dict format: {"timestamp": ..., "type": ..., "json_data": ...}
+    Save a dictionary to disk as a binary cache file.
+    The dictionary must contain keys: 'timestamp', 'type', and 'json_data'.
+
+    Args:
+        data_dict (dict): The cache data to be saved.
     """
     if not _is_valid_cache_structure(data_dict):
         log("Invalid cache data format. Must include 'timestamp', 'type', 'json_data'.", LogLevel.ERROR)
@@ -83,10 +127,15 @@ def save_to_cache(data_dict: dict):
     except Exception as e:
         log(f"Failed to save cache: {e}", LogLevel.ERROR)
 
-
-def save_to_cache_if_needed(cache_type: CacheType, data, if_save: bool, saved_item_name=""):
+def save_to_cache_if_needed(cache_type: CacheType, data: Any, if_save: bool, saved_item_name: str = "") -> None:
     """
-    Wrapper to conditionally save data to cache.
+    Save cache data only if the if_save flag is True and data is not empty.
+
+    Args:
+        cache_type (CacheType): The type of data to be cached.
+        data (Any): The actual data object to be saved.
+        if_save (bool): Whether to proceed with saving the data.
+        saved_item_name (str, optional): Optional label for logging purpose.
     """
     if not isinstance(cache_type, CacheType):
         log("Invalid cache type argument. Must be a CacheType enum.", LogLevel.ERROR)
@@ -104,11 +153,17 @@ def save_to_cache_if_needed(cache_type: CacheType, data, if_save: bool, saved_it
         else:
             log("Data is empty. Nothing saved to cache.", LogLevel.WARN)
 
+
 # ----- Load from Cache -----
-def load_from_cache(cache_type: str):
+def load_from_cache(cache_type: str) -> Any:
     """
-    Load the latest valid (non-expired) cache of given type.
-    Returns json_data if valid cache exists, else None.
+    Load the latest valid cache file of a given type.
+
+    Args:
+        cache_type (str): The cache type name (e.g., 'memberlist', 'screenshot').
+
+    Returns:
+        Any: Cached 'json_data' content if valid cache is found; otherwise None.
     """
     if cache_type not in CACHE_TYPES:
         log(f"Invalid cache type requested: '{cache_type}'", LogLevel.ERROR)
@@ -161,11 +216,18 @@ def load_from_cache(cache_type: str):
 
     return None
 
+
 # ----- Cache Cleanup -----
-def cleanup_old_cache_files(cache_type: str, keep_count: int):
+def cleanup_old_cache_files(cache_type: str, keep_count: int) -> int:
     """
-    Delete older versions of cache files, keeping only the latest 'keep_count' files.
-    Returns number of deleted files.
+    Remove old cache files of the specified type, keeping only the latest N versions.
+
+    Args:
+        cache_type (str): Cache type name or "all" to clean all types.
+        keep_count (int): Number of recent files to retain.
+
+    Returns:
+        int: Number of deleted files.
     """
     deleted_count = 0
     cache_folder = os.path.abspath(FOLDER_PATHS.cache)
@@ -190,14 +252,18 @@ def cleanup_old_cache_files(cache_type: str, keep_count: int):
             full_paths.sort(key=lambda x: x[1], reverse=True)
 
             for file_path, _ in full_paths[keep_count:]:
-                _remove_file_safely(file_path, "exceed version limit")
+                _remove_file_safely(file_path)
                 deleted_count += 1
         except Exception as e:
             log(f"Error during cache cleanup for type '{ctype}': {e}", LogLevel.ERROR)
 
     return deleted_count
 
+def clear_all_cache_files() -> int:
+    """
+    Remove all cache files from the cache folder.
 
-def clear_all_cache_files():
-    """Convenience method to remove all cache files."""
+    Returns:
+        int: Number of deleted files.
+    """
     return cleanup_old_cache_files("all", keep_count=0)

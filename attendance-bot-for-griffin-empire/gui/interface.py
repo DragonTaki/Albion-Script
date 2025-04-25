@@ -16,10 +16,9 @@ from tkinter import font
 # Modular imports
 from botcore.core.fetch_web_attendance import fetch_web_attendance
 from botcore.core.fetch_guild_members import fetch_guild_members
-from botcore.core.fetch_textfile_attendance import fetch_textfile_attendance
-from botcore.core.fetch_screenshot_attendance import fetch_screenshot_attendance
+from botcore.core.fetch_daily_attendance import fetch_daily_attendance
 from botcore.core.generate_report import generate_report
-from botcore.core.cache import clear_all_cache_files
+from botcore.core.cache import CacheType, clear_all_cache_files
 from botcore.core.daily_summary import clear_all_daily_summary_files
 from botcore.core.log import append_runtime_log, save_log, save_all_logs, clear_log
 from botcore.core.logger import LogLevel, log, set_external_logger, log_welcome_message
@@ -292,7 +291,7 @@ class AttendanceBotGUI(tk.Tk):
     def fetch_textfile_attendance_task(self):
         log("Parsing textfile attendance...")
         try:
-            result = fetch_textfile_attendance()
+            result = fetch_daily_attendance("TEXTFILE", CacheType.TEXTFILE)
             if len(result) > 0:
                 log("Done.")
         except Exception as e:
@@ -301,7 +300,7 @@ class AttendanceBotGUI(tk.Tk):
     def fetch_screenshot_attendance_task(self):
         log("Parsing screenshots attendance via OCR...")
         try:
-            result = fetch_screenshot_attendance()
+            result = fetch_daily_attendance("SCREENSHOT", CacheType.SCREENSHOT)
             if len(result) > 0:
                 log("Done.")
         except Exception as e:

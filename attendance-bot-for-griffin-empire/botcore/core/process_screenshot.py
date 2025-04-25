@@ -21,20 +21,8 @@ import pytesseract
 import shutil
 from PIL import Image, ImageOps, ImageFilter
 
-<<<<<<< HEAD
 from botcore.config.constant import EXTENSIONS, DATETIME_FORMATS, DAYS_LOOKBACK, TEXTFILE_ENCODING
 from botcore.config.settings import FOLDER_PATHS, IF_DEBUG_MODE
-=======
-from botcore.config.constant import CONSTANTS, DAYS_LOOKBACK, TEXTFILE_ENCODING
-from botcore.config.settings import (
-    IF_DEBUG_MODE, DEBUG_FOLDER,
-    DATA_FOLDER,
-    EXTRA_ATTENDANCE_FOLDER,
-    TEMP_FOLDER
-)
-EXTENSIONS = CONSTANTS.EXTENSIONS
-DATETIME_FORMATS = CONSTANTS.DATETIME_FORMATS
->>>>>>> a838f2cd6ed05f953717ff138d4ed3f00a5a5a2c
 from .cache import CacheType, load_from_cache
 from .fetch_guild_members import fetch_guild_members
 from .logger import LogLevel, log
