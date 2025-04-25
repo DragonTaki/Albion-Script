@@ -9,96 +9,113 @@
 # ----- ----- ----- -----
 
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Callable
 
-from .config.settings import IF_DEBUG_MODE
+from botcore.config.constant import DATETIME_FORMATS
+from botcore.config.settings import IF_DEBUG_MODE
 
-external_logger = None  # GUI logger callback
+# Logger default color if not specified
+DEFAULT_LOG_COLOR = "white"
 
-# Logger Time Formats
-TIMESTAMP_FORMAT = "%d/%m/%Y %H:%M:%S"
+# External GUI logger callback
+external_logger: Callable[[str], None] | None = None
 
-# Logger Levels
+
+# ----- Log Level Enum ----- #
 class LogLevel(Enum):
-    INIT  = ("init",  None)  # No color for init
+    INIT  = ("init",  None)      # No color for init
     DEBUG = ("debug", "gray")
     INFO  = ("info",  "white")
     WARN  = ("warn",  "yellow")
     ERROR = ("error", "red")
 
-    def __init__(self, label, color):
+    def __init__(self, label: str, color: str | None):
         self._label = label
         self._color = color
 
     @property
     def label(self) -> str:
-        # Always return uppercase label like INIT, INFO, etc.
+        """Return uppercased label, e.g., INFO, ERROR"""
         return self._label.upper()
 
     @property
     def color(self) -> str | None:
+        """Return associated display color"""
         return self._color
 
-# Default color mapping
-LEVEL_COLOR_MAP = {
-    "info" : "white",
-    "warn" : "yellow",
-    "error": "red"
-}
 
-def set_external_logger(callback_fn):
+# ----- Dataclass for a Log Record ----- #
+@dataclass
+class LogRecord:
+    message: str
+    level: LogLevel
+    timestamp: str = datetime.now().strftime(DATETIME_FORMATS.general)
+
+    def to_text(self) -> str:
+        """Format log record for console"""
+        return f"{self.timestamp} [{self.level.label}] {self.message}"
+
+    def to_json(self) -> str:
+        """Format log record for GUI JSON logger"""
+        return json.dumps({
+            "text" : self.to_text(),
+            "color": self.level.color or DEFAULT_LOG_COLOR,
+            "tag"  : f"tag_{self.level.label}"
+        })
+
+
+# ----- Main logger API ----- #
+def set_external_logger(callback_fn: Callable[[str], None]) -> None:
+    """Assign GUI log callback for external logging"""
     global external_logger
     external_logger = callback_fn
 
-# Main function to log messages
-def log(message, level=LogLevel.INFO):
+
+def log(message: str, level: LogLevel = LogLevel.INFO) -> None:
+    """Log to console and optionally to GUI if callback is set"""
     if level == LogLevel.DEBUG and not IF_DEBUG_MODE:
         return
 
-    level_str = level.label
-    level_color = level.color or "white"
-
-    timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
-    full_text = f"{timestamp} [{level_str}] {message}"
-    print(full_text)  # Console
+    record = LogRecord(message=message, level=level)
+    print(record.to_text())
 
     if external_logger:
-        log_json = json.dumps({
-            "text": full_text,
-            "color": level_color,
-            "tag": f"tag_{level_str}"
-        })
-        external_logger(log_json)
+        try:
+            external_logger(record.to_json())
+        except Exception as e:
+            print(f"[LOGGER ERROR] Failed to send to external logger: {e}")
 
-def log_welcome_message():
+
+# ----- GUI Welcome Message ----- #
+def log_welcome_message() -> None:
+    """Send colored rainbow-style welcome message to GUI"""
+    if not external_logger:
+        return
+
     pastel_rainbow_colors = [
-        "#FFB3BA",  # soft red
-        "#FFDFBA",  # soft orange
-        "#FFFFBA",  # soft yellow
-        "#BAFFC9",  # soft green
-        "#BAE1FF",  # soft blue
-        "#D5BAFF",  # soft indigo
-        "#FFBAED",  # soft violet
+        "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9",
+        "#BAE1FF", "#D5BAFF", "#FFBAED"
     ]
-
     welcome = "Welcome to use Griffin Empire Attendance Bot!"
-    author = "Author: DragonTaki"
-    rainbow_line = []
-    for i, char in enumerate(welcome):
-        rainbow_line.append({
-            "text": char,
-            "color": pastel_rainbow_colors[i % len(pastel_rainbow_colors)],
-            "bold": True,
-            "tag": f"rainbow_{i}"
-        })
+    author  = "Author: DragonTaki"
 
-    if external_logger:
+    rainbow_line = [{
+        "text": char,
+        "color": pastel_rainbow_colors[i % len(pastel_rainbow_colors)],
+        "bold": True,
+        "tag": f"rainbow_{i}"
+    } for i, char in enumerate(welcome)]
+
+    try:
         external_logger(json.dumps(rainbow_line))
-        # Add the author info with special style
         external_logger(json.dumps([{
             "text": "\n" + author + "\n",
             "color": "cyan",
             "italic": True,
             "tag": "author_tag"
         }]))
+    except Exception as e:
+        print(f"[WELCOME ERROR] Failed to send welcome message: {e}")

@@ -8,7 +8,7 @@
 # Version: v1.1
 # ----- ----- ----- -----
 
-from .config.constant import TEXTFILE_ENCODING
+from botcore.config.constant import TEXTFILE_ENCODING
 from .logger import LogLevel, log
 
 # Constants for Textfile Processing

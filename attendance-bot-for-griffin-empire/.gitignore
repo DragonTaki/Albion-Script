@@ -1,6 +1,6 @@
 # Ignore users file
+attendance_data/
 cache/
-extra_attendance/
 report/
 temp/
 temp_debug/
@@ -17,6 +17,9 @@ dist/
 # Ignore Python bytecode files
 *.pyc
 __pycache__/
+
+# Ignore VSCode files
+.vscode/
 
 # Ignore logs or other temporary files
 *.cache

@@ -14,8 +14,8 @@ import atexit
 
 from gui.interface import AttendanceBotGUI
 from gui.trial_interface import show_trial_expired_warning, show_trial_notice
-from botcore.config import TRIAL_VERSION, EXPIRE_DATE
-from botcore.log import shutdown_runtime_log
+from botcore.config.settings import IF_TRIAL_VERSION, EXPIRE_DATE
+from botcore.core.log import shutdown_runtime_log
 
 def get_network_datetime() -> datetime | None:
     try:
@@ -28,7 +28,7 @@ def get_network_datetime() -> datetime | None:
     
 # Check expiration before running
 def is_expired():
-    if not TRIAL_VERSION:
+    if not IF_TRIAL_VERSION:
         return False
     try:
         if EXPIRE_DATE == "YYYY-MM-DD":  # Check for invalid default
@@ -42,7 +42,7 @@ def is_expired():
         return True  # Fallback: block if invalid
 
 def main():
-    if TRIAL_VERSION:
+    if IF_TRIAL_VERSION:
         if is_expired():
             print("❌ Trial expired. Please contact the developer.")
             show_trial_expired_warning()

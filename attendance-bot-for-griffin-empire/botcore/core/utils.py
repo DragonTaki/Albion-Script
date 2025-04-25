@@ -4,98 +4,112 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/23
-# Version: v1.2
+# Update Date: 2025/04/26
+# Version: v1.4
 # ----- ----- ----- -----
 
 import hashlib
 import os
-import time
 import sys
-
+import time
 from datetime import datetime
+from typing import Callable, Optional
 
-from .config.constant import TEXTFILE_ENCODING
-from .config.settings import EXTRA_ATTENDANCE_FOLDER_FORMAT
-from .logger import log
+from botcore.config.constant import DATETIME_FORMATS, TEXTFILE_ENCODING
+from botcore.config.settings import FOLDER_PATHS
+from botcore.config.runtime import EXE_BASE_PATH, MEIPASS_PATH
+from .logger import log, LogLevel
 
-# Constants
-## General usage
-DEFAULT_HASH_LENGTH = 16
+# ----- Constants -----
+DEFAULT_HASH_LENGTH = 16  # Length for generated file hash
 
-## Detecting PyInstaller environment
-IS_PACKAGED = hasattr(sys, "_MEIPASS")
-BASE_PATH = sys._MEIPASS if IS_PACKAGED else os.path.abspath(".")
-
-# Ensure a folder exists before using it
-def ensure_folder_exists(folder_path):
-    """Create the folder if it doesn't exist"""
+def _ensure_folder_exists(folder_path: str) -> None:
+    """
+    Ensure that a folder exists. If it doesn't exist, create it.
+    Internal use only.
+    """
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
-def is_valid_folder_name(folder_name):
+
+def is_valid_folder_name(folder_name: str) -> bool:
+    """
+    Check if a folder name matches the expected folder date format.
+    Public utility.
+    """
     try:
-        # Try to parse the folder name to see if it matches the date format
-        datetime.strptime(folder_name, EXTRA_ATTENDANCE_FOLDER_FORMAT)
+        datetime.strptime(folder_name, DATETIME_FORMATS.folder)
         return True
     except ValueError:
         return False
 
-# Generate random filename based on type
-def generate_cache_filename(cache_type):
-    """Generate a unique cache filename with prefix"""
+
+def generate_cache_filename(cache_type: str) -> str:
+    """
+    Generate a unique filename for cache storage.
+    Public utility.
+    """
     timestamp = str(time.time()).encode(TEXTFILE_ENCODING)
     filename_hash = hashlib.sha256(timestamp).hexdigest()[:DEFAULT_HASH_LENGTH]
     return f"{cache_type}_{filename_hash}.cache"
 
-# Construct full path for a cache file
-def get_cache_file_path(filename):
-    """Return full path and ensure the cache folder exists"""
-    from .config.settings import CACHE_FOLDER
-    ensure_folder_exists(CACHE_FOLDER)
-    return os.path.join(CACHE_FOLDER, filename)
 
-# Unified path resolver for resources in packaged or dev mode
-def get_path(*relative_parts):
-    """Get correct file path whether running from source or PyInstaller package"""
-    return os.path.join(BASE_PATH, *relative_parts)
-
-# Get the relative path from the current working directory to a target file
-def get_relative_path_to_target(filepath):
+def get_cache_file_path(filename: str) -> str:
     """
-    Calculate the relative path from BASE_PATH to the target file,
-    supporting both absolute and relative input.
-    Return relative path to BASE_PATH if same drive, else return absolute path.
+    Get the full cache file path and ensure the folder exists.
+    Public utility.
+    """
+    _ensure_folder_exists(FOLDER_PATHS.cache)
+    return os.path.join(FOLDER_PATHS.cache, filename)
+
+
+def get_runtime_base(use_meipass: bool = False) -> str:
+    """
+    Get the correct base path depending on runtime environment.
+    Public utility.
+    """
+    return MEIPASS_PATH if use_meipass and MEIPASS_PATH else EXE_BASE_PATH
+
+
+def get_path(*relative_parts: str, use_meipass: bool = False) -> str:
+    """
+    Construct a full path from base directory + relative path segments.
+    Public utility.
+    """
+    return os.path.join(get_runtime_base(use_meipass), *relative_parts)
+
+
+def get_relative_path_to_target(filepath: str) -> Optional[str]:
+    """
+    Get a relative path to a target file from the base folder.
+    Returns absolute path if drives mismatch or error occurs.
+    Public utility.
     """
     if not filepath or not isinstance(filepath, str):
-        log("Invalid filepath provided to get_relative_path_to_target.", "w")
+        log("Invalid filepath provided to get_relative_path_to_target.", LogLevel.WARN)
         return None
 
     try:
-        # Normalize input to absolute path
         filepath = os.path.abspath(filepath)
-        # Try to calculate relative path
         return os.path.relpath(filepath, BASE_PATH)
-    except ValueError as e:
-        # Handle case where drives differ (e.g., E: vs C:)
+    except ValueError:
         return filepath
 
-def get_file_checksum(filepath: str) -> str:
+
+def _get_file_checksum(filepath: str) -> str:
     """
-    Compute MD5 checksum for a file.
-    :param filepath: Absolute path to the file
-    :return: Hexadecimal checksum string
+    Compute MD5 checksum of a file.
+    Internal use only.
     """
     with open(filepath, "rb") as f:
         return hashlib.md5(f.read()).hexdigest()
 
+
 def check_file_checksum(filepath: str, expected_checksum: str) -> bool:
     """
-    Check whether file's checksum matches the expected value.
-    :param filepath: Absolute path to the file
-    :param expected_checksum: Expected MD5 hash
-    :return: True if matches, False otherwise
+    Validate whether a file's checksum matches the expected hash.
+    Public utility.
     """
     if not os.path.exists(filepath):
         return False
-    return get_file_checksum(filepath) == expected_checksum
+    return _get_file_checksum(filepath) == expected_checksum

@@ -21,6 +21,14 @@ DAYS_LOOKBACK = max(INTERVALS)
 # File Formats
 TEXTFILE_ENCODING = "utf-8"
 
+EXTENSIONS = SafeNamespace(
+    csv   = ".csv",
+    cache = ".cache",
+    log   = ".log",
+    text  = (".txt",),
+    image = (".jpg", ".jpeg", ".png")
+)
+
 # Date Time Formats
 ## Combination functions
 def join_date(sep="", order=DATE_ORDER):
@@ -28,8 +36,6 @@ def join_date(sep="", order=DATE_ORDER):
 
 def join_time(sep=""):
     return sep.join(["%H", "%M", "%S"])
-
-# Function for Safe Constant Namespace
 
 # Safe Constants
 ## Define constants
@@ -40,22 +46,9 @@ SEPARATORS = SafeNamespace(
     display  = "/"   # 2025/01/01
 )
 
-CONSTANTS = SafeNamespace(
-    EXTENSIONS = {
-        "csv"  : ".csv",
-        "cache": ".cache",
-        "log"  : ".log",
-        "text" : (".txt",),
-        "image": (".jpg", ".jpeg", ".png"),
-    },
-    SEPARATORS = SEPARATORS,  # Use the already initialized SEPARATORS
-    DATETIME_FORMATS = {
-        "csv"    : f"{join_date(SEPARATORS.date)}{SEPARATORS.datetime}{join_time()}",                 # 2025-01-01_120000
-        "log"    : f"{join_date(SEPARATORS.date)}{SEPARATORS.datetime}{join_time(SEPARATORS.time)}",  # 2025-01-01_12.00.00
-        "folder" : join_date(SEPARATORS.date),                                                        # 2025-01-01
-        "general": f"{join_date(SEPARATORS.display)} {join_time(':')}"                                # 2025/01/01 12:00:00
-    }
+DATETIME_FORMATS = SafeNamespace(
+    csv     = f"{join_date(SEPARATORS.date)}{SEPARATORS.datetime}{join_time()}",                 # 2025-01-01_120000
+    log     = f"{join_date(SEPARATORS.date)}{SEPARATORS.datetime}{join_time(SEPARATORS.time)}",  # 2025-01-01_12.00.00
+    folder  = join_date(SEPARATORS.date),                                                        # 2025-01-01
+    general = f"{join_date(SEPARATORS.display)} {join_time(':')}"                                # 2025/01/01 12:00:00
 )
-
-## Register constants to global namespace
-CONSTANTS.register()

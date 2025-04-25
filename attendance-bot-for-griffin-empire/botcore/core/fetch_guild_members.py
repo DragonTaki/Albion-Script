@@ -10,7 +10,7 @@
 
 import requests
 
-from .config.settings import GUILD_INFO_LIST
+from botcore.config.settings import GUILD_INFO_LIST
 from .cache import CacheType, save_to_cache_if_needed
 from .logger import LogLevel, log
 
