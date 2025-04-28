@@ -62,6 +62,7 @@ fi
 # Stage all files and commit
 echo "📦 Staging all files and committing..."
 git add .
+git status
 git commit -m "Commit from Git Bash" || echo "ℹ️ No changes to commit."
 
 # Prompt before pushing

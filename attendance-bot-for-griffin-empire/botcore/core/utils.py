@@ -14,10 +14,10 @@ import time
 from datetime import datetime
 from typing import Optional
 
-from botcore.config.constant import DATETIME_FORMATS, TEXTFILE_ENCODING
-from botcore.config.settings import FOLDER_PATHS
+from botcore.config.constant import CacheType, DATETIME_FORMATS, TEXTFILE_ENCODING
+from botcore.config.settings_manager import settings
 from botcore.config.runtime import EXE_BASE_PATH, MEIPASS_PATH
-from .logger import log, LogLevel
+from botcore.logging.app_logger import log, LogLevel
 
 # ----- Constants ----- #
 DEFAULT_HASH_LENGTH = 16  # Length for generated file hash
@@ -53,19 +53,19 @@ def is_valid_folder_name(folder_name: str) -> bool:
         return False
 
 
-def generate_cache_filename(cache_type: str) -> str:
+def generate_cache_filename(cache_type: CacheType) -> str:
     """
     Generate a unique filename for cache storage based on current timestamp.
 
     Args:
-        cache_type (str): The type of cache (e.g., 'attendance', 'player').
+        cache_type (CacheType): The type of cache.
 
     Returns:
         str: A unique cache filename in the format `<cache_type>_<hash>.cache`.
     """
     timestamp = str(time.time()).encode(TEXTFILE_ENCODING)
     filename_hash = hashlib.sha256(timestamp).hexdigest()[:DEFAULT_HASH_LENGTH]
-    return f"{cache_type}_{filename_hash}.cache"
+    return f"{cache_type.value}_{filename_hash}.cache"
 
 
 def get_cache_file_path(filename: str) -> str:
@@ -78,8 +78,8 @@ def get_cache_file_path(filename: str) -> str:
     Returns:
         str: The full path to the cache file.
     """
-    ensure_folder_exists(FOLDER_PATHS.cache)
-    return os.path.join(FOLDER_PATHS.cache, filename)
+    ensure_folder_exists(settings.folder_paths.cache)
+    return os.path.join(settings.folder_paths.cache, filename)
 
 
 def get_runtime_base(use_meipass: bool = False) -> str:

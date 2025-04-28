@@ -21,14 +21,18 @@ import pytesseract
 import shutil
 from PIL import Image, ImageOps, ImageFilter
 
-from botcore.config.constant import EXTENSIONS, DATETIME_FORMATS, DAYS_LOOKBACK, TEXTFILE_ENCODING
-from botcore.config.settings import FOLDER_PATHS, IF_DEBUG_MODE
-from .cache import CacheType, load_from_cache
+from botcore.config.constant import CacheType, EXTENSIONS, DATETIME_FORMATS, DAYS_LOOKBACK, TEXTFILE_ENCODING
+from botcore.config.settings_manager import settings
+from botcore.logging.app_logger import LogLevel, log
+from .cache import load_from_cache
 from .fetch_guild_members import fetch_guild_members
-from .logger import LogLevel, log
 from .utils import get_file_checksum, get_path, ensure_folder_exists
 
 # Settings for Screenshot Processing
+## Sys paths
+APP_DATA_FOLDER = "app_data"
+THIRD_PARTY_FOLDER = "third-party"
+
 ## Debug mode
 AUTO_DELETE_TEMP_FILE = False  # Toggle this to `True` to clean up debug folder
 
@@ -87,17 +91,17 @@ def pil_to_cv2_gray(image: Image.Image):
 
 # Constants
 WORDLIST_TEMP_FILENAME = "temp_wordlist.txt"
-WORDLIST_TEMP_FILE = os.path.join(FOLDER_PATHS.temp, WORDLIST_TEMP_FILENAME)
-ensure_folder_exists(FOLDER_PATHS.temp)
+WORDLIST_TEMP_FILE = os.path.join(settings.folder_paths.temp, WORDLIST_TEMP_FILENAME)
+ensure_folder_exists(settings.folder_paths.temp)
 BUTTON_TEMPLATE_FILENAME = "button.png"
-BUTTON_TEMPLATE_PATH = get_path(FOLDER_PATHS.app, BUTTON_TEMPLATE_FILENAME)
+BUTTON_TEMPLATE_PATH = get_path(APP_DATA_FOLDER, BUTTON_TEMPLATE_FILENAME, use_meipass=True)
 BUTTON_TEMPLATE_ORIG = Image.open(BUTTON_TEMPLATE_PATH)
 BUTTON_TEMPLATE_ENLARGED = enlarge_image(BUTTON_TEMPLATE_ORIG)
 BUTTON_TEMPLATE_CV2 = pil_to_cv2_gray(BUTTON_TEMPLATE_ENLARGED)
 MAX_VERTICAL_DIFF = 3
 
 # Tesseract setup
-TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "third-party", "tesseract")
+TESSERACT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", THIRD_PARTY_FOLDER, "tesseract")
 TESSERACT_EXEC = os.path.join(TESSERACT_DIR, "tesseract.exe")
 TESSDATA_DIR = os.path.join(TESSERACT_DIR, "tessdata")
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_EXEC
@@ -135,7 +139,7 @@ def save_debug_pictures(images, original_filename, prefix, subfolder=None):
         prefix: Filename prefix to identify image purpose, e.g., 'v0_enlarged'.
         subfolder: Optional. Save to a subfolder under DEBUG_FOLDER if specified.
     """
-    if not IF_DEBUG_MODE:
+    if not settings.enable_debug_mode:
         return
 
     # Check and strip known image extensions
@@ -146,7 +150,7 @@ def save_debug_pictures(images, original_filename, prefix, subfolder=None):
         name_without_ext = original_filename
 
     # Prepare folder path
-    folder_path = os.path.join(FOLDER_PATHS.debug, subfolder) if subfolder else FOLDER_PATHS.debug
+    folder_path = os.path.join(settings.folder_paths.debug, subfolder) if subfolder else settings.folder_paths.debug
     os.makedirs(folder_path, exist_ok=True)
 
     # Ensure images is a list
@@ -171,12 +175,12 @@ def clear_debug_folder():
     If subfolders are empty after deletion, remove them as well.
     """
     # Check if the DEBUG_FOLDER exists
-    if not os.path.exists(FOLDER_PATHS.debug):
-        log(f"DEBUG_FOLDER \"{FOLDER_PATHS.debug}\" does not exist.", LogLevel.WARN)
+    if not os.path.exists(settings.folder_paths.debug):
+        log(f"DEBUG_FOLDER \"{settings.folder_paths.debug}\" does not exist.", LogLevel.WARN)
         return
     
     # Iterate over all items in the DEBUG_FOLDER
-    for root, dirs, files in os.walk(FOLDER_PATHS.debug, topdown=False):  # Walk in reverse to delete files first
+    for root, dirs, files in os.walk(settings.folder_paths.debug, topdown=False):  # Walk in reverse to delete files first
         for file in files:
             # Only delete image files
             if file.lower().endswith(EXTENSIONS.image):
@@ -442,9 +446,9 @@ def match_player_names(recognized_names, player_list, version_label):
 
 def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
     today = datetime.today()
-    result_by_day = {}
 
-    folder_path = os.path.join(FOLDER_PATHS.attendance, folder_name)
+    ensure_folder_exists(settings.folder_paths.attendance)
+    folder_path = os.path.join(settings.folder_paths.attendance, folder_name)
     try:
         folder_date = datetime.strptime(folder_name, DATETIME_FORMATS.folder)
     except ValueError:

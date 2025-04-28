@@ -11,31 +11,24 @@
 import os
 import pickle
 from datetime import datetime, timezone, timedelta
-from enum import Enum
 from typing import Any
 
-from botcore.config.constant import EXTENSIONS
-from botcore.config.settings import FOLDER_PATHS
-from .logger import LogLevel, log
+from botcore.config.constant import CacheType, EXTENSIONS
+from botcore.config.settings_manager import settings
+from botcore.logging.app_logger import LogLevel, log
 from .utils import (
     generate_cache_filename,
     get_cache_file_path,
     get_relative_path_to_target,
-    ensure_folder_exists
+    ensure_folder_exists,
 )
 
 # ----- Cache Settings -----
 CACHE_EXPIRY_HOURS = 8
 MAX_CACHE_VERSIONS = 1
 
-# ----- Cache Type Enum -----
-class CacheType(Enum):
-    MEMBERLIST = "memberlist"
-    ATTENDANCE = "attendance"
-    TEXTFILE   = "textfile"
-    SCREENSHOT = "screenshot"
+CACHE_TYPES = list(CacheType)
 
-CACHE_TYPES = [e.value for e in CacheType]
 
 # ----- Internal Helpers -----
 def _is_valid_cache_structure(data: dict) -> bool:
@@ -109,20 +102,21 @@ def save_to_cache(data_dict: dict) -> None:
         log("Invalid cache data format. Must include 'timestamp', 'type', 'json_data'.", LogLevel.ERROR)
         return
 
-    cache_type = data_dict["type"]
-    if cache_type not in CACHE_TYPES:
-        log(f"Unsupported cache type: '{cache_type}'", LogLevel.ERROR)
+    try:
+        cache_type = CacheType(data_dict["type"])
+    except ValueError:
+        log(f"Unsupported cache type: '{data_dict['type']}'", LogLevel.ERROR)
         return
 
     filename = generate_cache_filename(cache_type)
     full_path = get_cache_file_path(filename)
-    ensure_folder_exists(os.path.abspath(FOLDER_PATHS.cache))
+    ensure_folder_exists(os.path.abspath(settings.folder_paths.cache))
 
     try:
         with open(full_path, "wb") as f:
             pickle.dump(data_dict, f)
         relative_path = get_relative_path_to_target(full_path)
-        log(f"{cache_type.capitalize()} data cached as '{relative_path}'.")
+        log(f"{cache_type.name.capitalize()} data cached as '{relative_path}'.")
         cleanup_old_cache_files(cache_type, keep_count=MAX_CACHE_VERSIONS)
     except Exception as e:
         log(f"Failed to save cache: {e}", LogLevel.ERROR)
@@ -153,28 +147,28 @@ def save_to_cache_if_needed(cache_type: CacheType, data: Any, if_save: bool, sav
         else:
             log("Data is empty. Nothing saved to cache.", LogLevel.WARN)
 
-
-# ----- Load from Cache -----
-def load_from_cache(cache_type: str) -> Any:
+def load_from_cache(cache_type: CacheType) -> Any:
     """
     Load the latest valid cache file of a given type.
 
     Args:
-        cache_type (str): The cache type name (e.g., 'memberlist', 'screenshot').
+        cache_type (CacheType): CacheType enum member.
 
     Returns:
         Any: Cached 'json_data' content if valid cache is found; otherwise None.
     """
     if cache_type not in CACHE_TYPES:
-        log(f"Invalid cache type requested: '{cache_type}'", LogLevel.ERROR)
+        log(f"Invalid cache type requested: '{cache_type.name}'", LogLevel.ERROR)
         return None
 
-    cache_folder = os.path.abspath(FOLDER_PATHS.cache)
+    cache_folder = os.path.abspath(settings.folder_paths.cache)
     ensure_folder_exists(cache_folder)
+
+    cache_prefix = f"{cache_type.value}_"
 
     cache_files = [
         f for f in os.listdir(cache_folder)
-        if f.startswith(f"{cache_type}_") and f.endswith(EXTENSIONS.cache)
+        if f.startswith(cache_prefix) and f.endswith(EXTENSIONS.cache)
     ]
 
     latest_valid = None
@@ -192,7 +186,7 @@ def load_from_cache(cache_type: str) -> Any:
             with open(full_path, "rb") as f:
                 cache = pickle.load(f)
 
-            if cache.get("type") != cache_type:
+            if cache.get("type") != cache_type.value:
                 _remove_file_safely(full_path, "inconsistent cache type")
                 continue
 
@@ -216,46 +210,55 @@ def load_from_cache(cache_type: str) -> Any:
 
     return None
 
-
 # ----- Cache Cleanup -----
-def cleanup_old_cache_files(cache_type: str, keep_count: int) -> int:
+def cleanup_old_cache_files(cache_type: CacheType, keep_count: int) -> int:
     """
     Remove old cache files of the specified type, keeping only the latest N versions.
+    If the cache_type is CacheType.ALL, all cache files are cleaned except for the latest N versions of each type.
 
     Args:
-        cache_type (str): Cache type name or "all" to clean all types.
+        cache_type (CacheType): Specific cache type to clean. If CacheType.ALL, all cache types will be cleaned.
         keep_count (int): Number of recent files to retain.
 
     Returns:
         int: Number of deleted files.
     """
     deleted_count = 0
-    cache_folder = os.path.abspath(FOLDER_PATHS.cache)
+    cache_folder = os.path.abspath(settings.folder_paths.cache)
     ensure_folder_exists(cache_folder)
 
-    types_to_clean = CACHE_TYPES if cache_type == "all" else [cache_type]
+    if cache_type == CacheType.ALL:
+        # When ALL is selected, clean all cache types
+        cache_types_to_clean = [ct for ct in CacheType if ct != CacheType.ALL]
+    elif cache_type in CACHE_TYPES:
+        # Otherwise, clean only the specific cache type
+        cache_types_to_clean = [cache_type]
+    else:
+        log(f"Invalid cache type during cleanup: '{cache_type.name}'", LogLevel.ERROR)
+        return deleted_count
 
-    for ctype in types_to_clean:
-        if ctype not in CACHE_TYPES:
-            log(f"Invalid cache type during cleanup: '{ctype}'", LogLevel.ERROR)
-            continue
+    try:
+        for c_type in cache_types_to_clean:
+            cache_prefix = f"{c_type.value}_"
 
-        try:
             matched_files = [
                 f for f in os.listdir(cache_folder)
-                if f.startswith(f"{ctype}_") and f.endswith(EXTENSIONS.cache)
+                if f.startswith(cache_prefix) and f.endswith(EXTENSIONS.cache)
             ]
+
             full_paths = [
                 (get_cache_file_path(f), os.path.getmtime(get_cache_file_path(f)))
                 for f in matched_files
             ]
             full_paths.sort(key=lambda x: x[1], reverse=True)
 
+            # Delete files beyond the keep_count
             for file_path, _ in full_paths[keep_count:]:
                 _remove_file_safely(file_path)
                 deleted_count += 1
-        except Exception as e:
-            log(f"Error during cache cleanup for type '{ctype}': {e}", LogLevel.ERROR)
+
+    except Exception as e:
+        log(f"Error during cache cleanup for type '{cache_type.name}': {e}", LogLevel.ERROR)
 
     return deleted_count
 
@@ -266,4 +269,4 @@ def clear_all_cache_files() -> int:
     Returns:
         int: Number of deleted files.
     """
-    return cleanup_old_cache_files("all", keep_count=0)
+    return cleanup_old_cache_files(CacheType.ALL, keep_count=0)

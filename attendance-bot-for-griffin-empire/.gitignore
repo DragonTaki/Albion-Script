@@ -10,6 +10,11 @@ dist/
 
 *.csv
 *.spec
+key.txt
+secret.key
+api_keys.json
+api_keys_raw.json
+auth.json
 
 # Don't ignore all files in the third_party directory
 !/third_party/*

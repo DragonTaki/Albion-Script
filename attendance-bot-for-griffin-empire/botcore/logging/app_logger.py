@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# logger.py
+# app_logger.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
@@ -15,7 +15,7 @@ from enum import Enum
 from typing import Callable
 
 from botcore.config.constant import DATETIME_FORMATS
-from botcore.config.settings import IF_DEBUG_MODE
+from botcore.config.settings_manager import settings
 
 # Logger default color if not specified
 DEFAULT_LOG_COLOR = "white"
@@ -120,7 +120,7 @@ def log(message: str, level: LogLevel = LogLevel.INFO) -> None:
         message (str): The message to log.
         level (LogLevel): The severity level of the log (default is INFO).
     """
-    if level == LogLevel.DEBUG and not IF_DEBUG_MODE:
+    if level == LogLevel.DEBUG and not settings.enable_debug_mode:
         return
 
     record = LogRecord(message=message, level=level)

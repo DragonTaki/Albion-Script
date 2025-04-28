@@ -10,9 +10,9 @@
 
 from types import SimpleNamespace
 
+from botcore.logging.app_logger import LogLevel, log
 from .cache import save_to_cache_if_needed
 from .daily_summary import collect_all_daily_attendance, calculate_interval_summary
-from .logger import LogLevel, log
 
 
 def fetch_daily_attendance(
@@ -31,6 +31,7 @@ def fetch_daily_attendance(
         dict: A dictionary with keys like "7d", "14d", "28d", each mapping to
             another dictionary of player names and their attendance counts.
     """
+
     cache_type = data_type.cache_type # Mapping back to cache_type
 
     result_by_day = collect_all_daily_attendance(data_type)
@@ -41,11 +42,11 @@ def fetch_daily_attendance(
             cache_type,
             summary_by_interval,
             if_save_to_cache,
-            f"{data_type} attendance data"
+            f"{data_type.cache_type.name.capitalize()} attendance data"
         )
     else:
         log(
-            f"No valid {data_type} attendance data found. Nothing saved.",
+            f"No valid {data_type.cache_type.name} attendance data found. Nothing saved.",
             LogLevel.ERROR
         )
 

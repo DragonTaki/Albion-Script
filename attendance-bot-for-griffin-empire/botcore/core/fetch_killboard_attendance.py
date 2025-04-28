@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# fetch_web_attendance.py
+# fetch_killboard_attendance.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
@@ -10,10 +10,10 @@
 
 import requests
 
-from botcore.config.constant import INTERVALS
-from botcore.config.settings import GUILD_INFO_LIST
-from .cache import CacheType, save_to_cache_if_needed
-from .logger import LogLevel, log
+from botcore.config.constant import CacheType, INTERVALS
+from botcore.config.static_settings import GUILD_INFO_LIST
+from botcore.logging.app_logger import LogLevel, log
+from .cache import save_to_cache_if_needed
 
 # Constants for Fetch API
 API_BASE_URL = "https://api-east.albionbattles.com/player"
@@ -21,7 +21,7 @@ MIN_GP = 50
 API_ENDPOINT_TEMPLATE = f"{API_BASE_URL}?guildSearch={{guild_name}}&interval={{interval}}&minGP={MIN_GP}"
 HEADERS = {"Accept": "application/json, text/plain, */*"}
 
-def fetch_web_attendance(if_save_to_cache=True):
+def fetch_killboard_attendance(if_save_to_cache=True):
     fetched_data = {interval: {} for interval in INTERVALS}
     for interval in INTERVALS:
         for guild in GUILD_INFO_LIST:
@@ -44,6 +44,6 @@ def fetch_web_attendance(if_save_to_cache=True):
                 continue
 
     # Save to cache
-    save_to_cache_if_needed(CacheType.ATTENDANCE, fetched_data, if_save_to_cache, "Killboard attendance")
+    save_to_cache_if_needed(CacheType.KILLBOARD, fetched_data, if_save_to_cache, "Killboard attendance")
 
     return fetched_data

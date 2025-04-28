@@ -14,8 +14,8 @@ set -e # Exit on error
 # ----- Config -----
 ENTRY_POINT="run.py"
 DIST_DIR="dist"
-CONFIG_FILE="botcore/config.py"
-RESOURCE_FOLDER="data"
+CONFIG_FILE="botcore/config/static_settings.py"
+RESOURCE_FOLDER="app_data"
 THIRD_PARTY_FOLDER="third-party"
 OUTPUT_NAME="Albion_Attendance_Bot_made_by_DragonTaki"
 ICON_FILE="icon.ico"

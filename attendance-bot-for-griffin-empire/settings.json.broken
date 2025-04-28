@@ -1,0 +1,30 @@
+{
+    guild_info: {
+        "default": "Griffin Empire",
+        list: [
+            {
+                name: "Griffin Empire",
+                id: "sAFfW_tPSkuU_49gvg4sZQ",
+                tag: "GE",
+            },
+        ],
+    },
+    used_data: {
+        killboard: false,
+        textfile: false,
+        screenshot: true,
+    },
+    date_format: "DDMMYYYY",
+    folder_paths: {
+        app: "app_data",
+        attendance: "attendance_data",
+        cache: "cache",
+        debug: "temp_debug",
+        log: "log",
+        report: "report",
+        temp: "temp",
+    },
+    max_csv_versions: 3,
+    enable_debug_mode: true,
+    force_regenerate_daily_summary: false,
+}

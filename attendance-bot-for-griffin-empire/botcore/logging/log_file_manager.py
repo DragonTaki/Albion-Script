@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# log.py
+# log_file_manager.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
@@ -14,12 +14,12 @@ import msvcrt
 from datetime import datetime
 
 from botcore.config.constant import EXTENSIONS, DATETIME_FORMATS, TEXTFILE_ENCODING
-from botcore.config.settings import FOLDER_PATHS
-from .logger import LogLevel, log
-from .utils import ensure_folder_exists
+from botcore.config.settings_manager import settings
+from .app_logger import LogLevel, log
+from botcore.core.utils import ensure_folder_exists
 
 # Ensure log folder exists
-ensure_folder_exists(FOLDER_PATHS.log)
+ensure_folder_exists(settings.folder_paths.log)
 
 # Log prefixes for different types of logs
 LOG_PREFIXES = {
@@ -46,7 +46,7 @@ def get_log_file_path(log_type: str) -> str:
 
     timestamp = datetime.now().strftime(DATETIME_FORMATS.log)
     filename = f"{LOG_PREFIXES[log_type]}{timestamp}{EXTENSIONS.log}"
-    return os.path.join(FOLDER_PATHS.log, filename)
+    return os.path.join(settings.folder_paths.log, filename)
 
 
 # Persistent log paths

@@ -1,5 +1,5 @@
 # ----- ----- ----- -----
-# trial_interface.py
+# trial_notice_interface.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
@@ -13,27 +13,34 @@ import sys
 from tkinter import messagebox
 
 # Show trial expired popup
-def show_trial_expired_warning():
+def show_trial_expired_warning() -> None:
     """Show a blocking popup to inform the user the trial has expired"""
     root = tk.Tk()
     root.withdraw() # Hide main window
 
     messagebox.showerror(
         title="Trial Expired",
-        message="❌ Trial expired. Please contact the developer."
+        message=(
+            "❌ Trial expired.\n"
+            "Please contact the developer."
+        )
     )
 
     root.destroy()
     sys.exit(1)
 
-def show_trial_notice():
+
+def show_trial_notice() -> None:
     """Show a non-blocking popup to inform the user this is a trial version"""
     root = tk.Tk()
     root.withdraw()  # Hide main window
 
     messagebox.showinfo(
         title="Trial Version",
-        message="🔔 This is a trial version.\nPlease contact the developer if you need full access."
+        message=(
+            "🔔 This is a trial version.\n"
+            "Please contact the developer if you need full access."
+        )
     )
 
     root.destroy()

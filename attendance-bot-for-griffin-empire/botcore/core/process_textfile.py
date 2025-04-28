@@ -9,7 +9,7 @@
 # ----- ----- ----- -----
 
 from botcore.config.constant import TEXTFILE_ENCODING
-from .logger import LogLevel, log
+from botcore.logging.app_logger import LogLevel, log
 
 # Constants for Textfile Processing
 INGAME_GUILD_DATA_COLUMNS = ["Character Name", "Last Seen", "Roles"]

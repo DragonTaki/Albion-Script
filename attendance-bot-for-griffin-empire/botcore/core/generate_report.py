@@ -13,13 +13,14 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
-from botcore.config.constant import EXTENSIONS, DATETIME_FORMATS, INTERVALS, TEXTFILE_ENCODING
-from botcore.config.settings import MAX_CSV_VERSIONS, FOLDER_PATHS
-from .cache import CacheType, load_from_cache
-from .logger import LogLevel, log
+from botcore.config.constant import CacheType, EXTENSIONS, DATETIME_FORMATS, INTERVALS, TEXTFILE_ENCODING
+from botcore.config.settings_manager import settings
+from botcore.logging.app_logger import LogLevel, log
+from .cache import load_from_cache
+from .daily_summary import DAILY_SUMMARY
 from .fetch_daily_attendance import fetch_daily_attendance
 from .fetch_guild_members import fetch_guild_members
-from .fetch_web_attendance import fetch_web_attendance
+from .fetch_killboard_attendance import fetch_killboard_attendance
 from .utils import get_relative_path_to_target, ensure_folder_exists
 
 # Constants
@@ -29,26 +30,27 @@ VIRTUAL_STATS_ALL = "*stats_avg_all"
 VIRTUAL_STATS_ACTIVE = "*stats_avg_activeonly"
 ATTENDANCE_FIELD_TEMPLATE = "{}DaysAttendance"
 
+
 # Helper function to fetch required data from cache or fallback sources
 def fetch_required_data(
-    use_web: bool = True,
-    use_textfile: bool = True,
-    use_screenshot: bool = True
+    use_killboard: bool = True,
+    use_textfile: bool = False,
+    use_screenshot: bool = False
 ) -> Tuple[Optional[Dict[str, int]], Optional[Dict[str, int]], Optional[Dict[str, int]], Optional[Dict[str, int]]]:
     """
     Fetches necessary attendance data. Tries to load from cache, otherwise fetches from appropriate sources.
 
     Args:
-        use_web (bool): Whether to load web attendance.
+        use_killboard (bool): Whether to load killboard attendance.
         use_textfile (bool): Whether to load textfile attendance.
         use_screenshot (bool): Whether to load screenshot attendance.
 
     Returns:
-        Tuple containing player list, web attendance map, textfile attendance map, screenshot attendance map.
+        Tuple containing player list, killboard attendance map, textfile attendance map, screenshot attendance map.
         If any required data cannot be fetched, returns None for that part.
     """
     try:
-        player_list = load_from_cache(CacheType.MEMBERLIST.value)
+        player_list = load_from_cache(CacheType.MEMBERLIST)
         if not player_list:
             log(f"No valid {CacheType.MEMBERLIST.value} cache found, attempting to fetch from server...", LogLevel.WARN)
             player_list = fetch_guild_members()
@@ -56,26 +58,27 @@ def fetch_required_data(
                 log("Failed to retrieve player list.", LogLevel.ERROR)
                 return None, None, None, None
         
-        attendance_map = load_from_cache(CacheType.ATTENDANCE.value) if use_web else {}
-        if not attendance_map and use_web:
-            log(f"No valid {CacheType.ATTENDANCE.value} cache found, attempting to fetch from server...", LogLevel.WARN)
-            attendance_map = fetch_web_attendance()
+        attendance_map = load_from_cache(CacheType.KILLBOARD) if use_killboard else {}
+        if not attendance_map and use_killboard:
+            log(f"No valid {CacheType.KILLBOARD.value} cache found, attempting to fetch from server...", LogLevel.WARN)
+            attendance_map = fetch_killboard_attendance()
         
-        textfile_data = load_from_cache(CacheType.TEXTFILE.value) if use_textfile else {}
+        textfile_data = load_from_cache(CacheType.TEXTFILE) if use_textfile else {}
         if not textfile_data and use_textfile:
             log(f"No valid {CacheType.TEXTFILE.value} cache found, attempting to launch calculation function...", LogLevel.WARN)
-            textfile_data = fetch_daily_attendance("TEXTFILE", CacheType.TEXTFILE)
+            textfile_data = fetch_daily_attendance(DAILY_SUMMARY.TEXTFILE)
 
-        screenshot_data = load_from_cache(CacheType.SCREENSHOT.value) if use_screenshot else {}
+        screenshot_data = load_from_cache(CacheType.SCREENSHOT) if use_screenshot else {}
         if not screenshot_data and use_screenshot:
             log(f"No valid {CacheType.SCREENSHOT.value} cache found, attempting to launch calculation function...", LogLevel.WARN)
-            screenshot_data = fetch_daily_attendance("SCREENSHOT", CacheType.SCREENSHOT)
+            screenshot_data = fetch_daily_attendance(DAILY_SUMMARY.SCREENSHOT)
 
         return player_list, attendance_map, textfile_data, screenshot_data
     
     except Exception as e:
         log(f"Error fetching required data: {e}", LogLevel.ERROR)
         return None, None, None, None
+
 
 # Function to check if a player is active based on attendance data
 def is_active_player(row: Dict[str, int]) -> bool:
@@ -90,8 +93,9 @@ def is_active_player(row: Dict[str, int]) -> bool:
     """
     return any(row[ATTENDANCE_FIELD_TEMPLATE.format(interval)] > 0 for interval in INTERVALS)
 
+
 # Function to compute statistics (average attendance) for all players or only active players
-def compute_statistics(data_rows: List[Dict[str, int]]) -> List[Dict[str, int]]:
+def _compute_statistics(data_rows: List[Dict[str, int]]) -> List[Dict[str, int]]:
     """
     Computes statistics for attendance data, including averages for all players and active players.
 
@@ -120,22 +124,29 @@ def compute_statistics(data_rows: List[Dict[str, int]]) -> List[Dict[str, int]]:
 
     return stats_rows
 
+
 # Main function to generate the attendance report
-def generate_report(save_to_csv: bool = False, pure_report: bool = False) -> List[Dict[str, int]]:
+def generate_report(
+    use_killboard: bool = True,
+    use_textfile: bool = False,
+    use_screenshot: bool = False,
+    save_to_csv: bool = False) -> List[Dict[str, int]]:
     """
-    Generates an attendance report based on the available data (web, textfile, screenshot).
+    Generates an attendance report based on the available data (killboard, textfile, screenshot).
 
     Args:
+        use_killboard (bool): Whether to include killboard attendance in the report.
+        use_textfile (bool): Whether to include textfile attendance in the report.
+        use_screenshot (bool): Whether to include screenshot attendance in the report.
         save_to_csv (bool): Whether to save the generated report to a CSV file.
-        pure_report (bool): Whether to include only web attendance in the report (exclude textfile and screenshot boosts).
 
     Returns:
         list: A list of dictionaries representing the generated report.
     """
     try:
-        player_list, web_attendance_map, textfile_attendance_map, screenshot_attendance_map = fetch_required_data(pure_report)
+        player_list, killboard_attendance_map, textfile_attendance_map, screenshot_attendance_map = fetch_required_data(use_killboard, use_textfile, use_screenshot)
 
-        if not player_list or not web_attendance_map:
+        if not player_list:
             log("Insufficient data to generate report.", LogLevel.ERROR)
             return []
 
@@ -145,20 +156,17 @@ def generate_report(save_to_csv: bool = False, pure_report: bool = False) -> Lis
 
             for interval in INTERVALS:
                 field = ATTENDANCE_FIELD_TEMPLATE.format(interval)
-                base_count = web_attendance_map.get(interval, {}).get(player, 0)
 
-                # Only add the textfile and screenshot boosts if pure_report is False
-                if not pure_report:
-                    textfile_boost = textfile_attendance_map.get(interval, {}).get(player, 0)
-                    screenshot_boost = screenshot_attendance_map.get(interval, {}).get(player, 0)
-                    row[field] = base_count + textfile_boost + screenshot_boost
-                else:
-                    row[field] = base_count
+                killboard_count = killboard_attendance_map.get(interval, {}).get(player, 0)
+                textfile_count = textfile_attendance_map.get(interval, {}).get(player, 0)
+                screenshot_count = screenshot_attendance_map.get(interval, {}).get(player, 0)
+
+                row[field] = killboard_count + textfile_count + screenshot_count
 
             results.append(row)
 
         # Add two virtual summary rows: all and active players
-        stats_rows = compute_statistics(results)
+        stats_rows = _compute_statistics(results)
         results.extend(stats_rows)
 
         # If save_to_csv is True, generate the CSV file
@@ -171,6 +179,7 @@ def generate_report(save_to_csv: bool = False, pure_report: bool = False) -> Lis
         log(f"Error generating report: {e}", LogLevel.ERROR)
         return []
 
+
 # Function to write the report data to a CSV file
 def write_csv(data_rows: List[Dict[str, int]]) -> None:
     """
@@ -182,7 +191,7 @@ def write_csv(data_rows: List[Dict[str, int]]) -> None:
     try:
         timestamp_str = datetime.now().strftime(DATETIME_FORMATS.csv)
         filename = f"{CSV_REPORT_PREFIX}{timestamp_str}{EXTENSIONS.csv}"
-        report_dir = os.path.abspath(FOLDER_PATHS.report)
+        report_dir = os.path.abspath(settings.folder_paths.report)
         ensure_folder_exists(report_dir)
         filepath = os.path.join(report_dir, filename)
 
@@ -202,6 +211,7 @@ def write_csv(data_rows: List[Dict[str, int]]) -> None:
     except Exception as e:
         log(f"Failed to write CSV: {e}", LogLevel.ERROR)
 
+
 # Function to delete old CSV files, keeping only the most recent N versions
 def delete_old_csvs(report_dir: str) -> None:
     """
@@ -217,7 +227,7 @@ def delete_old_csvs(report_dir: str) -> None:
             reverse=True
         )
 
-        for oldfile in csv_files[MAX_CSV_VERSIONS:]:
+        for oldfile in csv_files[settings.max_csv_versions:]:
             abs_filepath = os.path.abspath(os.path.join(report_dir, oldfile))
             os.remove(abs_filepath)
             relative_path = get_relative_path_to_target(abs_filepath)

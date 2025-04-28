@@ -3,9 +3,12 @@
 # An user-defined utility module
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/25
-# Update Date: 2025/04/25
-# Version: v1.0
+# Update Date: 2025/04/26
+# Version: v1.1
 # ----- ----- ----- -----
+
+# Auto-expand these keys if their values are (min, max)
+AUTO_BOUND_KEYS = {"WIDTH", "HEIGHT"}
 
 class SafeNamespace:
     """
@@ -31,8 +34,11 @@ class SafeNamespace:
             SEPARATORS = SafeNamespace(date="-", datetime="_")
         """
         for key, value in entries.items():
+            # Auto convert `WIDTH`/`HEIGHT` tuple to SafeNamespace(MIN=..., MAX=...)
+            if key.upper() in AUTO_BOUND_KEYS and isinstance(value, (tuple, list)) and len(value) == 2:
+                value = SafeNamespace(MIN=value[0], MAX=value[1])
             # Check if the value is a dictionary. If so, recursively wrap it in SafeNamespace.
-            if isinstance(value, dict):
+            elif isinstance(value, dict):
                 value = SafeNamespace(**value)
             # Dynamically add each key-value pair as attributes to the object.
             setattr(self, key, value)
@@ -83,3 +89,16 @@ class SafeNamespace:
         for key, value in self.__dict__.items():
             # Registers each constant to the global namespace, making it accessible globally.
             globals()[key] = value
+
+    def to_dict(self):
+        """
+        Convert the SafeNamespace object to a dictionary.
+
+        Returns:
+            dict: A dictionary representation of the SafeNamespace instance where
+                  the keys are the constant names and the values are their corresponding values.
+
+        Example:
+            SEPARATORS.to_dict() will return {'date': '-', 'datetime': '_', ...}
+        """
+        return {key: value for key, value in self.__dict__.items()}
