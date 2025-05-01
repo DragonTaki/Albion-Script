@@ -14,16 +14,18 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from botcore.config.constant import CacheType, EXTENSIONS, DATETIME_FORMATS, INTERVALS, TEXTFILE_ENCODING
-from botcore.config.settings_manager import settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 from botcore.logging.app_logger import LogLevel, log
 from .cache import load_from_cache
 from .daily_summary import DAILY_SUMMARY
 from .fetch_daily_attendance import fetch_daily_attendance
 from .fetch_guild_members import fetch_guild_members
 from .fetch_killboard_attendance import fetch_killboard_attendance
-from .utils import get_relative_path_to_target, ensure_folder_exists
+from botcore.utils.file_utils import get_relative_path_to_target, ensure_folder_exists
 
-# Constants
+
+# ----- Constants ----- #
 CSV_REPORT_PREFIX = "attendance_data_"
 ATTENDANCE_HEADERS = ["7DaysAttendance", "14DaysAttendance", "28DaysAttendance"]
 VIRTUAL_STATS_ALL = "*stats_avg_all"
@@ -31,8 +33,9 @@ VIRTUAL_STATS_ACTIVE = "*stats_avg_activeonly"
 ATTENDANCE_FIELD_TEMPLATE = "{}DaysAttendance"
 
 
+# ----- Helper Functions ----- #
 # Helper function to fetch required data from cache or fallback sources
-def fetch_required_data(
+def _fetch_required_data(
     use_killboard: bool = True,
     use_textfile: bool = False,
     use_screenshot: bool = False
@@ -125,6 +128,7 @@ def _compute_statistics(data_rows: List[Dict[str, int]]) -> List[Dict[str, int]]
     return stats_rows
 
 
+# ----- Main Functions ----- #
 # Main function to generate the attendance report
 def generate_report(
     use_killboard: bool = True,
@@ -144,7 +148,7 @@ def generate_report(
         list: A list of dictionaries representing the generated report.
     """
     try:
-        player_list, killboard_attendance_map, textfile_attendance_map, screenshot_attendance_map = fetch_required_data(use_killboard, use_textfile, use_screenshot)
+        player_list, killboard_attendance_map, textfile_attendance_map, screenshot_attendance_map = _fetch_required_data(use_killboard, use_textfile, use_screenshot)
 
         if not player_list:
             log("Insufficient data to generate report.", LogLevel.ERROR)

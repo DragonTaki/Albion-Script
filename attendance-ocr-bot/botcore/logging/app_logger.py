@@ -4,18 +4,19 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/25
-# Version: v1.3
+# Update Date: 2025/05/01
+# Version: v1.4
 # ----- ----- ----- -----
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Callable
 
 from botcore.config.constant import DATETIME_FORMATS
-from botcore.config.settings_manager import settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 
 # Logger default color if not specified
 DEFAULT_LOG_COLOR = "white"
@@ -75,7 +76,7 @@ class LogRecord:
     """
     message: str
     level: LogLevel
-    timestamp: str = datetime.now().strftime(DATETIME_FORMATS.general)
+    timestamp: str = field(default_factory=lambda: datetime.now().strftime(DATETIME_FORMATS.general))
 
     def to_text(self) -> str:
         """
@@ -100,7 +101,7 @@ class LogRecord:
         })
 
 
-# ----- Main logger API ----- #
+# ----- Main Functions ----- #
 def set_external_logger(callback_fn: Callable[[str], None]) -> None:
     """
     Assign a callback function for logging to an external GUI.
@@ -147,6 +148,8 @@ def log_welcome_message() -> None:
         "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9",
         "#BAE1FF", "#D5BAFF", "#FFBAED"
     ]
+    print(f"[DEBUG] current_user in log_welcome_message: {settings.current_user}")
+    greeting = f"Hello, {settings.current_user}!" if settings.current_user else "Hello!"
     welcome = "Welcome to use Griffin Empire Attendance Bot!"
     author  = "Author: DragonTaki"
 
@@ -158,6 +161,12 @@ def log_welcome_message() -> None:
     } for i, char in enumerate(welcome)]
 
     try:
+        external_logger(json.dumps([{
+            "text": greeting + "\n",
+            "color": "lightgreen",
+            "bold": True,
+            "tag": "greeting_tag"
+        }]))
         external_logger(json.dumps(rainbow_line))
         external_logger(json.dumps([{
             "text": "\n" + author + "\n",

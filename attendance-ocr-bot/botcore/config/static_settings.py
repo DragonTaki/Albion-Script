@@ -10,6 +10,8 @@
 
 from botcore.safe_namespace import SafeNamespace
 
+
+# ----- Constants ----- #
 # Guild Info Lists
 GUILD_INFO_LIST = [
     {"name":"Griffin Empire", "id":"sAFfW_tPSkuU_49gvg4sZQ", "tag":"GE"},
@@ -21,8 +23,10 @@ USED_DATA = SafeNamespace(
     screenshot = True,
 )
 
+
 # Date Time Main Format
 DATE_FORMAT = "DDMMYYYY"
+
 
 # Folder Paths
 FOLDER_PATHS = SafeNamespace(
@@ -35,12 +39,15 @@ FOLDER_PATHS = SafeNamespace(
     temp       = "temp",
 )
 
+
 # CSV Settings
 MAX_CSV_VERSIONS = 3
+
 
 # Debug Settings
 IF_DEBUG_MODE = True
 IF_FORCE_NEW_DAILY_SUMMARY = False
+
 
 # Limit Version
 IF_TRIAL_VERSION = False

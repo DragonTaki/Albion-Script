@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/26
-# Version: v2.0
+# Update Date: 2025/05/01
+# Version: v2.1
 # ----- ----- ----- -----
 
 import json
@@ -14,16 +14,18 @@ import tkinter as tk
 from tkinter import font
 
 from botcore.safe_namespace import SafeNamespace
-from botcore.config.settings_manager import settings, save_setting
+from botcore.config.settings_manager import get_settings, save_setting
+settings = get_settings()
 from botcore.core.fetch_killboard_attendance import fetch_killboard_attendance
 from botcore.core.fetch_guild_members import fetch_guild_members
 from botcore.core.generate_report import generate_report
 from botcore.core.cache import clear_all_cache_files
 from botcore.core.daily_summary import DAILY_SUMMARY, clear_all_daily_summary_files
-from botcore.logging.app_logger import LogLevel, log, set_external_logger, log_welcome_message
+from botcore.logging.app_logger import LogLevel, log, set_external_logger
 from botcore.logging.log_file_manager import append_runtime_log, save_log, save_all_logs, clear_log
 
-# Constants for UI objects
+
+# ----- Constants for UI objects ----- #
 UI = SafeNamespace(
     FRAME={
         "COLOR": {
@@ -31,8 +33,25 @@ UI = SafeNamespace(
         }
     },
     BUTTON={
-        "WIDTH": (250, 500),
-        "HEIGHT": (20, 120),
+        "WIDTH": (240, 500),
+        "HEIGHT": (50, 120),
+        "RWIDTH": 0.7,
+        "RHEIGHT": 0.1,
+        "COLOR": {
+            "BACKGROUND": "#0F2540",
+            "FOREGROUND": "#FCFAF2",
+        },
+        "FONT": lambda: font.Font(family="Helvetica", size=11, weight="bold"),
+    },
+    SWITCH={
+        "WIDTH": (180, 500),
+        "HEIGHT": (30, 120),
+    },
+    LABEL={
+        "WIDTH": (240, 500),
+        "HEIGHT": (30, 120),
+        "RWIDTH": 1.0,
+        "RHEIGHT": 0.05,
         "COLOR": {
             "BACKGROUND": "#0F2540",
             "FOREGROUND": "#FCFAF2",
@@ -40,7 +59,7 @@ UI = SafeNamespace(
         "FONT": lambda: font.Font(family="Helvetica", size=11, weight="bold"),
     },
     LOGGER={
-        "WIDTH": (100, 1000),
+        "WIDTH": (420, 1000),
         "HEIGHT": (100, 400),
         "COLOR": {
             "BACKGROUND": "#434343",
@@ -48,27 +67,60 @@ UI = SafeNamespace(
         },
         "FONT": lambda: font.Font(family="Courier", size=10),
     },
-    SWITCH={
-        "WIDTH": (250, 500),
-        "HEIGHT": (20, 120),
+    SCROLLBAR={
+        "WIDTH": 15,
     },
     RIGHTCLICK_MENU={
         "FONT": lambda: font.Font(family="Cascadia Mono", size=9),
     },
+    PADDING=10,
+    FULL={
+        "RWIDTH": 1.0,
+        "RHEIGHT": 1.0,
+    },
 )
 
 class AttendanceBotGUI(tk.Frame):
-    def __init__(self, root):
+    def __init__(self, root, show_welcome: bool = False):
         super().__init__(root)
         self.root = root
+
+        self.button_row_configs = [
+            ("Step 1: Get database"),
+            ("Fetch member list", self.fetch_member_list_task),
+            ("Step 2: Choose attendance source"),
+            ("Calculate attendance - killboard", self.fetch_killboard_attendance_task, "killboard", settings.used_data.killboard),
+            ("Calculate attendance - textfile", self.fetch_textfile_attendance_task, "textfile", settings.used_data.textfile),
+            ("Calculate attendance - screenshot", self.fetch_screenshot_attendance_task, "screenshot", settings.used_data.screenshot),
+            ("Step 3: Generate report file"),
+            ("Generate report", self.generate_report_from_cache_task),
+            ("Other options"),
+            ("Clear All Cache", self.clear_all_cache_task),
+            ("Clear Attendance Cache", self.clear_attendance_cache_task),
+            ("Clear Daily Summary Cache", self.clear_daily_summary_task),
+        ]
+
         self.configure(bg=UI.FRAME.COLOR.BACKGROUND)
-        self.grid(sticky="nsew")
+        self.place(x=0, y=0, relwidth=1, relheight=1)
+
+        """Calculate window min size"""
+        row_total_height = 0
+        for config in self.button_row_configs:
+            if isinstance(config, str):
+                row_total_height += UI.LABEL.HEIGHT.MIN
+            else:
+                row_total_height += UI.BUTTON.HEIGHT.MIN
+        root_min_width = UI.BUTTON.WIDTH.MIN + UI.SWITCH.WIDTH.MIN + UI.LOGGER.WIDTH.MIN + UI.SCROLLBAR.WIDTH + UI.PADDING * 3
+        root_min_height = row_total_height + UI.PADDING * 2
+        self.root.minsize(root_min_width, root_min_height)
 
         self.bind("<Configure>", self.update_sizes)
-        set_external_logger(self.log)
-
         self.create_widgets()
-        log_welcome_message()
+        set_external_logger(self.log)
+        if show_welcome:
+            from botcore.logging.app_logger import log_welcome_message
+            log_welcome_message()
+
 
     def create_widgets(self):
         """Create and organize all widgets in the GUI."""
@@ -76,96 +128,123 @@ class AttendanceBotGUI(tk.Frame):
         self.switches = {}
 
         # Create left and right frames
-        self.left_frame = self.create_frame(self, 0, 0)
-        self.right_frame = self.create_frame(self, 0, 1)
-
-        # Initialize row counter
-        r = 0
-
-        # Helper function to create a button with an optional switch
-        self.create_button_with_action(r, "Fetch member list", self.fetch_member_list_task)
-        r += 1
-        self.create_switch_button(r, "Fetch attendance - killboard", self.fetch_killboard_attendance_task, "killboard", settings.used_data.killboard)
-        r += 1
-        self.create_switch_button(r, "Fetch attendance - textfile", self.fetch_textfile_attendance_task, "textfile", settings.used_data.textfile)
-        r += 1
-        self.create_switch_button(r, "Fetch attendance - screenshot", self.fetch_screenshot_attendance_task, "screenshot", settings.used_data.screenshot)
-        r += 1
-
-        self.create_button_with_action(r, "Generate report", self.generate_report_from_cache_task)
-        r += 1
-        self.create_button_with_action(r, "Clear All Cache", self.clear_all_cache_task)
-        r += 1
-        self.create_button_with_action(r, "Clear Attendance Cache", self.clear_attendance_cache_task)
-        r += 1
-        self.create_button_with_action(r, "Clear Daily Summary Cache", self.clear_daily_summary_task)
+        self.left_frame = self.create_frame(self)
+        self.right_frame = self.create_frame(self)
 
         # Create the logger area and configure right-click menu and keyboard shortcuts
-        self.logger = self.create_logger_area(self.right_frame)
+        self.logger, self.logger_scrollbar = self.create_logger_area(self.right_frame)
         self.create_right_click_menu(self.logger)
         self.configure_shortcuts(self.logger)
 
-    def create_frame(self, parent, row, column):
+        # Initialize row counter
+        self.button_rows = []
+        row_y = 0.0
+
+        for config in self.button_row_configs:
+            if isinstance(config, str):
+                """Label only"""
+                text = config
+                self.create_label_row(row_y, text)
+                row_y += 0.04
+            elif len(config) == 2:
+                """Button only"""
+                text, task = config
+                self.create_button_with_action(row_y, text, task)
+                row_y += 0.1
+            else:
+                """Button with switch"""
+                text, task, key, initial = config
+                self.create_switch_button(row_y, text, task, key, initial)
+                row_y += 0.1
+
+
+    def create_frame(self, parent):
         """Helper function to create frames."""
         frame = tk.Frame(parent, bg=UI.FRAME.COLOR.BACKGROUND)
-        frame.grid(row=row, column=column, sticky="nsew", padx=10, pady=10)
         return frame
 
-    def create_switch_button(self, row, button_text, task, switch_key, initial_state):
+    def create_switch_button(self, row_y, button_text, task, switch_key, initial_state):
         """Create a button with an optional toggle switch for data input."""
-        row_frame = self.create_frame(self.left_frame, row, 0)
+        row_frame = self.create_frame(self.left_frame)
+        row_frame.place(relx=0.0, rely=row_y, relwidth=UI.FULL.RWIDTH, relheight=UI.BUTTON.RHEIGHT)
+
         btn = self.create_button(row_frame, button_text, lambda: self.run_with_thread(task))
-        btn.pack(side="left", padx=5, pady=5)
-        self.buttons.append(btn)
+        btn.place(relx=0.005, rely=0.1, relwidth=0.7, relheight=0.8)
+
         switch = self.create_switch(
-            row_frame, 
-            switch_key, 
+            row_frame,
+            switch_key,
             initial_state,
             command=lambda: self.toggle_switch(switch_key)
         )
-        
-        self.switches[switch_key] = switch  # Store switch reference for later updates
+        switch_widget = switch["widget"]
+        switch_widget.place(relx=0.72, rely=0.2, relwidth=0.25, relheight=0.6)
 
-    def create_button_with_action(self, row, button_text, action):
+        self.buttons.append(btn)
+        self.switches[switch_key] = switch["var"]  # Store switch reference for later updates
+        self.button_rows.append(row_frame)
+
+    def create_button_with_action(self, row_y, button_text, action):
         """Create a simple button that runs an action when clicked."""
-        row_frame = self.create_frame(self.left_frame, row, 0)
+        row_frame = self.create_frame(self.left_frame)
+        row_frame.place(relx=0.005, rely=row_y, relwidth=UI.BUTTON.RWIDTH, relheight=UI.BUTTON.RHEIGHT)
+        
         btn = self.create_button(
             row_frame,
             button_text,
             lambda: self.run_with_thread(action)
         )
-        btn.pack(side="left", padx=5, pady=5)
+        btn.place(relx=0.0, rely=0.1, relwidth=1.0, relheight=0.8)
+
         self.buttons.append(btn)
+        self.button_rows.append(row_frame)
 
     def create_button(self, parent, text, command):
         """Helper function to create a button."""
-        width = UI.BUTTON.WIDTH.MIN // 10
-        height = UI.BUTTON.HEIGHT.MIN // 20
-        return tk.Button(parent, text=text, font=UI.BUTTON.FONT(), command=command,
-                         bg=UI.BUTTON.COLOR.BACKGROUND, fg=UI.BUTTON.COLOR.FOREGROUND,
-                         width=width, height=height,)
+        return tk.Button(
+            parent, text=text, font=UI.BUTTON.FONT(), command=command,
+            bg=UI.BUTTON.COLOR.BACKGROUND,
+            fg=UI.BUTTON.COLOR.FOREGROUND,
+            borderwidth=2, relief="solid"
+        )
 
     def create_switch(self, parent, key, initial_state, command=None):
-        """Helper function to create a switch (Checkbutton)."""
         var = tk.BooleanVar(value=initial_state)
-        chk = tk.Checkbutton(parent, text="Use this data", font=UI.BUTTON.FONT(), variable=var, command=command,
-                             bg=UI.FRAME.COLOR.BACKGROUND, fg=UI.BUTTON.COLOR.FOREGROUND,
-                             selectcolor=UI.FRAME.COLOR.BACKGROUND)
-        chk.var = var
-        chk.pack(side="left")
-        return var
+        chk = tk.Checkbutton(
+            parent, text="Use this data", variable=var, command=command,
+            font=UI.BUTTON.FONT(),
+            bg=UI.FRAME.COLOR.BACKGROUND,
+            fg=UI.BUTTON.COLOR.FOREGROUND,
+            selectcolor=UI.FRAME.COLOR.BACKGROUND
+        )
+        return {"var": var, "widget": chk}
+    
+    def create_label_row(self, row_y, text):
+        """Create a label row to group related buttons visually."""
+        row_frame = self.create_frame(self.left_frame)
+        row_frame.place(relx=0.01, rely=row_y, relwidth=UI.LABEL.RWIDTH, relheight=UI.LABEL.RHEIGHT)
+
+        label = tk.Label(
+            row_frame,
+            text=text,
+            font=UI.LABEL.FONT(),
+            bg=UI.FRAME.COLOR.BACKGROUND,
+            fg=UI.LABEL.COLOR.FOREGROUND,
+            anchor="w"
+        )
+        label.place(relx=0.02, rely=0.1, relwidth=0.96, relheight=0.8)
+        self.button_rows.append(row_frame)
 
     def create_logger_area(self, parent):
         """Create and configure the logger area on the right frame."""
-        logger = tk.Text(parent, wrap=tk.WORD, height=20, font=UI.LOGGER.FONT(),
+        logger = tk.Text(parent, wrap=tk.WORD, font=UI.LOGGER.FONT(),
                          bg=UI.LOGGER.COLOR.BACKGROUND, fg=UI.LOGGER.COLOR.FOREGROUND)
         logger.config(state=tk.DISABLED)
-        logger.pack(fill="both", expand=True, side="left")
 
         scrollbar = tk.Scrollbar(parent, command=logger.yview)
         logger.config(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-        return logger
+
+        return logger, scrollbar
 
     def create_right_click_menu(self, logger):
         """Create the right-click context menu for the logger."""
@@ -207,8 +286,8 @@ class AttendanceBotGUI(tk.Frame):
     def toggle_switch(self, switch_key):
         """Update the switch value and save to settings."""
         new_value = self.switches[switch_key].get()
-        setattr(settings.used_data, switch_key, new_value)
-        save_setting(switch_key, new_value)
+        setattr(settings.used_data, switch_key, new_value) 
+        save_setting(f"used_data.{switch_key}", new_value)
 
     def update_switches(self):
         """Update the UI switches to reflect the current settings."""
@@ -286,34 +365,44 @@ class AttendanceBotGUI(tk.Frame):
 
     def clear_log(self):
         clear_log(self.logger)
+        from botcore.logging.app_logger import log_welcome_message
         log_welcome_message()
 
     # Auto update sizes of buttons and frames on window resize
     def update_sizes(self, event=None):
-        window_width = self.master.winfo_width()
-        window_height = self.master.winfo_height()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
 
-        # Calculate button size for left frame
-        button_width = max(UI.BUTTON.WIDTH.MIN, min(UI.BUTTON.WIDTH.MAX, window_width // 4))
-        button_height = max(UI.BUTTON.HEIGHT.MIN, min(UI.BUTTON.HEIGHT.MAX, window_height // 15))
+        # Calculate left and right fame width
+        min_left_width = UI.BUTTON.WIDTH.MIN + UI.SWITCH.WIDTH.MIN + UI.PADDING * 4
+        left_width = max(width * 0.4 - UI.PADDING * 2, min_left_width)
+        right_width = width - left_width - UI.PADDING * 2
 
-        button_area_height = len(self.buttons) * button_height + (len(self.buttons) - 1) * 10
+        self.left_frame.place(
+            x=UI.PADDING,
+            y=UI.PADDING,
+            width=left_width,
+            height=height
+        )
+        self.right_frame.place(
+            x=UI.PADDING + left_width,
+            y=UI.PADDING,
+            width=right_width,
+            height=height
+        )
 
-        available_height = window_height - button_area_height - 50
-
-        # Update button sizes in left_frame
-        for btn in self.buttons:
-            btn.config(width=button_width // 10, height=button_height // 15)
-
-        # Update left_frame size
-        self.left_frame.config(width=window_width // 2, height=available_height)
-
-        # Update right_frame size (for logger)
-        logger_width = max(UI.LOGGER.WIDTH.MIN, min(UI.LOGGER.WIDTH.MAX, window_width // 2 - 20))
-        logger_height = max(UI.LOGGER.HEIGHT.MIN, min(UI.LOGGER.HEIGHT.MAX, window_height - 100))
-        
-        self.logger.config(width=logger_width // 10, height=logger_height // 15)
-        self.right_frame.config(width=window_width // 2, height=available_height)
+        self.logger.place(
+            x=0,
+            y=0,
+            width=right_width - UI.SCROLLBAR.WIDTH,
+            height=height - UI.PADDING * 2
+        )
+        self.logger_scrollbar.place(
+            x=right_width - UI.SCROLLBAR.WIDTH,
+            y=0,
+            width=UI.SCROLLBAR.WIDTH,
+            height=height - UI.PADDING * 2
+        )
 
     # Task wrappers (no UI logic here)
     def fetch_member_list_task(self):

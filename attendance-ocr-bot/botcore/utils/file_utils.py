@@ -1,11 +1,11 @@
 # ----- ----- ----- -----
-# utils.py
+# file_utils.py
 # For Albion Online "Griffin Empire" Guild only
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/04/26
-# Version: v1.4
+# Update Date: 2025/05/01
+# Version: v1.5
 # ----- ----- ----- -----
 
 import hashlib
@@ -15,14 +15,17 @@ from datetime import datetime
 from typing import Optional
 
 from botcore.config.constant import CacheType, DATETIME_FORMATS, TEXTFILE_ENCODING
-from botcore.config.settings_manager import settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 from botcore.config.runtime import EXE_BASE_PATH, MEIPASS_PATH
 from botcore.logging.app_logger import log, LogLevel
+
 
 # ----- Constants ----- #
 DEFAULT_HASH_LENGTH = 16  # Length for generated file hash
 
 
+# ---- File and Folder Related Functions ---- #
 def ensure_folder_exists(folder_path: str) -> None:
     """
     Ensure that a folder exists. If it doesn't exist, create it.

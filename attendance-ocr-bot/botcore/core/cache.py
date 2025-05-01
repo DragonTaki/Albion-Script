@@ -14,23 +14,24 @@ from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from botcore.config.constant import CacheType, EXTENSIONS
-from botcore.config.settings_manager import settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 from botcore.logging.app_logger import LogLevel, log
-from .utils import (
+from botcore.utils.file_utils import (
     generate_cache_filename,
     get_cache_file_path,
     get_relative_path_to_target,
     ensure_folder_exists,
 )
 
-# ----- Cache Settings -----
+# ----- Cache Settings ----- #
 CACHE_EXPIRY_HOURS = 8
 MAX_CACHE_VERSIONS = 1
 
 CACHE_TYPES = list(CacheType)
 
 
-# ----- Internal Helpers -----
+# ----- Helper Functions ----- #
 def _is_valid_cache_structure(data: dict) -> bool:
     """
     Check whether a dictionary follows the expected cache format.
@@ -46,6 +47,7 @@ def _is_valid_cache_structure(data: dict) -> bool:
     """
     required_keys = {"timestamp", "type", "json_data"}
     return isinstance(data, dict) and required_keys.issubset(data)
+
 
 def _is_cache_expired(timestamp: datetime) -> bool:
     """
@@ -89,8 +91,7 @@ def _remove_file_safely(file_path: str, reason: str = "") -> None:
         log(f"Failed to remove '{file_path}': {e}", LogLevel.ERROR)
 
 
-# ----- Save to Cache -----
-def save_to_cache(data_dict: dict) -> None:
+def _save_to_cache(data_dict: dict) -> None:
     """
     Save a dictionary to disk as a binary cache file.
     The dictionary must contain keys: 'timestamp', 'type', and 'json_data'.
@@ -121,32 +122,8 @@ def save_to_cache(data_dict: dict) -> None:
     except Exception as e:
         log(f"Failed to save cache: {e}", LogLevel.ERROR)
 
-def save_to_cache_if_needed(cache_type: CacheType, data: Any, if_save: bool, saved_item_name: str = "") -> None:
-    """
-    Save cache data only if the if_save flag is True and data is not empty.
 
-    Args:
-        cache_type (CacheType): The type of data to be cached.
-        data (Any): The actual data object to be saved.
-        if_save (bool): Whether to proceed with saving the data.
-        saved_item_name (str, optional): Optional label for logging purpose.
-    """
-    if not isinstance(cache_type, CacheType):
-        log("Invalid cache type argument. Must be a CacheType enum.", LogLevel.ERROR)
-        return
-
-    if if_save:
-        if data:
-            cache_data = {
-                "timestamp": datetime.now(timezone.utc),
-                "type": cache_type.value,
-                "json_data": data
-            }
-            save_to_cache(cache_data)
-            log(f"{saved_item_name} saved to cache.")
-        else:
-            log("Data is empty. Nothing saved to cache.", LogLevel.WARN)
-
+# ----- Main Functions ----- #
 def load_from_cache(cache_type: CacheType) -> Any:
     """
     Load the latest valid cache file of a given type.
@@ -210,7 +187,34 @@ def load_from_cache(cache_type: CacheType) -> Any:
 
     return None
 
-# ----- Cache Cleanup -----
+
+def save_to_cache_if_needed(cache_type: CacheType, data: Any, if_save: bool, saved_item_name: str = "") -> None:
+    """
+    Save cache data only if the if_save flag is True and data is not empty.
+
+    Args:
+        cache_type (CacheType): The type of data to be cached.
+        data (Any): The actual data object to be saved.
+        if_save (bool): Whether to proceed with saving the data.
+        saved_item_name (str, optional): Optional label for logging purpose.
+    """
+    if not isinstance(cache_type, CacheType):
+        log("Invalid cache type argument. Must be a CacheType enum.", LogLevel.ERROR)
+        return
+
+    if if_save:
+        if data:
+            cache_data = {
+                "timestamp": datetime.now(timezone.utc),
+                "type": cache_type.value,
+                "json_data": data
+            }
+            _save_to_cache(cache_data)
+            log(f"{saved_item_name} saved to cache.")
+        else:
+            log("Data is empty. Nothing saved to cache.", LogLevel.WARN)
+
+
 def cleanup_old_cache_files(cache_type: CacheType, keep_count: int) -> int:
     """
     Remove old cache files of the specified type, keeping only the latest N versions.

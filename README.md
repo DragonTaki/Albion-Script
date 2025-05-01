@@ -57,6 +57,7 @@ This product includes software developed by the Tesseract OCR project (https://g
 - [Twitch](https://bit.ly/DragonTakiTwitch)
 - [YouTube](https://bit.ly/DragonTakiYTNew)
 - [Twitter](https://twitter.com/MacroDragonTaki)
+- [Fur Affinity](https://bit.ly/DragonTakiFA)
 - [巴哈姆特](https://bit.ly/DragonTakiBaha)
 
 ---

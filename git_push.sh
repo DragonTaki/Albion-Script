@@ -11,7 +11,7 @@
 #!/bin/bash
 
 # ----- Config -----
-SUBMODULE_DIR="attendance-bot-for-griffin-empire"
+SUBMODULE_DIR="attendance-ocr-bot"
 GIT_REMOTE_NAME="origin"
 GIT_REMOTE_URL="https://github.com/DragonTaki/Albion-Script.git"
 MAIN_BRANCH="main"

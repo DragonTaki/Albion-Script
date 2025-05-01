@@ -11,11 +11,15 @@
 import os
 import sys
 
+
+# ----- Constants ----- #
 # Detect if running in a PyInstaller environment
 IS_PACKAGED = hasattr(sys, "_MEIPASS")
 
+
 # PyInstaller _MEIPASS temp directory (used for resource access)
 MEIPASS_PATH = getattr(sys, "_MEIPASS", None)
+
 
 # Executable base path: .exe directory (packed) or project root directory (IDE run)
 EXE_BASE_PATH = os.path.dirname(sys.executable) if IS_PACKAGED else os.path.abspath(".")

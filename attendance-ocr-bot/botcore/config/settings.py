@@ -8,7 +8,8 @@
 # Version: v1.0
 # ----- ----- ----- -----
 
-from .settings_manager import load_and_apply_settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 
 # Auto load and apply settings when being imported
-load_and_apply_settings()
+# load_and_apply_settings()

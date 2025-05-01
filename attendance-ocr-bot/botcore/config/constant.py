@@ -15,6 +15,7 @@ from botcore.safe_namespace import SafeNamespace
 from .static_settings import DATE_FORMAT
 
 
+# ----- Constants ----- #
 # CSV Headers
 CSV_HEADERS = ["Player", "7DaysAttendance", "14DaysAttendance", "28DaysAttendance"]
 

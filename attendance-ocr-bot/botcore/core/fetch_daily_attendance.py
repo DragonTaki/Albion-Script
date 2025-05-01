@@ -15,6 +15,7 @@ from .cache import save_to_cache_if_needed
 from .daily_summary import collect_all_daily_attendance, calculate_interval_summary
 
 
+# ----- Main Function ----- #
 def fetch_daily_attendance(
     data_type: SimpleNamespace,
     if_save_to_cache: bool = True

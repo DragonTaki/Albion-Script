@@ -14,9 +14,10 @@ import msvcrt
 from datetime import datetime
 
 from botcore.config.constant import EXTENSIONS, DATETIME_FORMATS, TEXTFILE_ENCODING
-from botcore.config.settings_manager import settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 from .app_logger import LogLevel, log
-from botcore.core.utils import ensure_folder_exists
+from botcore.utils.file_utils import ensure_folder_exists
 
 # Ensure log folder exists
 ensure_folder_exists(settings.folder_paths.log)
@@ -28,7 +29,8 @@ LOG_PREFIXES = {
 }
 
 
-def get_log_file_path(log_type: str) -> str:
+# ----- Helper Functions used by Constants ----- #
+def _get_log_file_path(log_type: str) -> str:
     """
     Generate the file path for the log based on the log type.
 
@@ -49,8 +51,9 @@ def get_log_file_path(log_type: str) -> str:
     return os.path.join(settings.folder_paths.log, filename)
 
 
+# ----- Constants ----- #
 # Persistent log paths
-RUNTIME_LOG_PATH = get_log_file_path("runtime")  # One persistent runtime log file
+RUNTIME_LOG_PATH = _get_log_file_path("runtime")  # One persistent runtime log file
 
 # Runtime log file handle (shared during runtime)
 try:
@@ -60,7 +63,7 @@ except Exception as e:
     _log_file = None
 
 
-def initialize_runtime_log() -> None:
+def _initialize_runtime_log() -> None:
     """
     Initializes the runtime log by logging the start of the logger.
     This should be called once when the module is imported.
@@ -69,6 +72,7 @@ def initialize_runtime_log() -> None:
     append_runtime_log("----- ----- ----- -----")
 
 
+# ----- Main Functions ----- #
 def shutdown_runtime_log() -> None:
     """
     Shuts down the runtime logger, closing the log file.
@@ -122,14 +126,13 @@ def save_log(log_lines: list[str]) -> str:
         str: The file path of the saved log, or empty string if failed.
     """
     try:
-        save_path = get_log_file_path("user_saved")
+        save_path = _get_log_file_path("user_saved")
         with open(save_path, "w", encoding=TEXTFILE_ENCODING) as f:
             f.writelines(line + "\n" for line in log_lines)
         return save_path
     except Exception as e:
         log(f"Failed to save log: {e}", LogLevel.ERROR)
         return ""
-
 
 def save_all_logs(full_log_text: str) -> str:
     """
@@ -161,6 +164,7 @@ def clear_log(tk_logger) -> None:
         log(f"Failed to clear log: {e}", LogLevel.WARN)
 
 
+# ----- Windows Specific Functions ----- #
 def lock_log_file_windows() -> None:
     """
     Locks the runtime log file on Windows to prevent concurrent access.
@@ -184,5 +188,6 @@ def unlock_log_file_windows() -> None:
         pass
 
 
+# ----- Initialization ----- #
 # Initialize the runtime log at the start
-initialize_runtime_log()
+_initialize_runtime_log()

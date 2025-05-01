@@ -22,24 +22,26 @@ import shutil
 from PIL import Image, ImageOps, ImageFilter
 
 from botcore.config.constant import CacheType, EXTENSIONS, DATETIME_FORMATS, DAYS_LOOKBACK, TEXTFILE_ENCODING
-from botcore.config.settings_manager import settings
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
 from botcore.logging.app_logger import LogLevel, log
 from .cache import load_from_cache
 from .fetch_guild_members import fetch_guild_members
-from .utils import get_file_checksum, get_path, ensure_folder_exists
+from botcore.utils.file_utils import get_file_checksum, get_path, ensure_folder_exists
 
-# Settings for Screenshot Processing
-## Sys paths
+# ----- Screenshot Processing Settings ----- #
+# Sys paths
 APP_DATA_FOLDER = "app_data"
 THIRD_PARTY_FOLDER = "third-party"
 
-## Debug mode
+# Debug mode
 AUTO_DELETE_TEMP_FILE = False  # Toggle this to `True` to clean up debug folder
+SCREENSHOT_DEBUG_MODE = True  # Toggle this to `True` to enable screenshot processing debug mode
 
-## Screenshot preprossing step 1: enlarge image
+# Screenshot preprossing step 1: enlarge image
 SCALE_FACTOR = 2.0  # Scale factor for enlarging the image
 
-## Screenshot preprossing step 2: matching area
+# Screenshot preprossing step 2: matching area
 min_scale = 0.7
 max_scale = 1.9
 step = 0.1
@@ -59,22 +61,25 @@ class MergeStrategy(Enum):
     MIDDLE = "middle"
     RIGHTMOST = "right"
 
-## Screenshot preprossing step 3: image preprocessing
+# Screenshot preprossing step 3: image preprocessing
 SHARPEN_KERNEL = np.array([
     [0, -0.2, 0],
     [-0.2, 2.5, -0.2],
     [0, -0.2, 0]
 ])
 
-## Matching option
+# Matching option
 FUZZY_MATCH_THRESHOLD = 75
 
-def enlarge_image(image: Image.Image):
+
+# ----- Helper Functions used by Constants ----- #
+def _enlarge_image(image: Image.Image):
     enlarged_size = (int (image.width * SCALE_FACTOR), int (image.height * SCALE_FACTOR))
     image = image.resize(enlarged_size, Image.LANCZOS)
     return image
 
-def pil_to_cv2_gray(image: Image.Image):
+
+def _pil_to_cv2_gray(image: Image.Image):
     """
     Convert a PIL image to a grayscale OpenCV image.
     
@@ -89,15 +94,18 @@ def pil_to_cv2_gray(image: Image.Image):
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     return gray
 
-# Constants
+# ----- Constants ----- #
+# File paths
 WORDLIST_TEMP_FILENAME = "temp_wordlist.txt"
 WORDLIST_TEMP_FILE = os.path.join(settings.folder_paths.temp, WORDLIST_TEMP_FILENAME)
 ensure_folder_exists(settings.folder_paths.temp)
 BUTTON_TEMPLATE_FILENAME = "button.png"
 BUTTON_TEMPLATE_PATH = get_path(APP_DATA_FOLDER, BUTTON_TEMPLATE_FILENAME, use_meipass=True)
+
+# Template image
 BUTTON_TEMPLATE_ORIG = Image.open(BUTTON_TEMPLATE_PATH)
-BUTTON_TEMPLATE_ENLARGED = enlarge_image(BUTTON_TEMPLATE_ORIG)
-BUTTON_TEMPLATE_CV2 = pil_to_cv2_gray(BUTTON_TEMPLATE_ENLARGED)
+BUTTON_TEMPLATE_ENLARGED = _enlarge_image(BUTTON_TEMPLATE_ORIG)
+BUTTON_TEMPLATE_CV2 = _pil_to_cv2_gray(BUTTON_TEMPLATE_ENLARGED)
 MAX_VERTICAL_DIFF = 3
 
 # Tesseract setup
@@ -107,11 +115,14 @@ TESSDATA_DIR = os.path.join(TESSERACT_DIR, "tessdata")
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_EXEC
 os.environ["TESSDATA_PREFIX"] = TESSDATA_DIR
 
+
+# ----- Daily summary Main Functions ----- #
 def create_word_list_file(player_list):
     with open(WORDLIST_TEMP_FILE, "w", encoding=TEXTFILE_ENCODING) as f:
         for name in player_list:
             f.write(name + "\n")
     return WORDLIST_TEMP_FILE
+
 
 def get_valid_player_list():
     """
@@ -130,7 +141,9 @@ def get_valid_player_list():
 
     return player_list
 
-def save_debug_pictures(images, original_filename, prefix, subfolder=None):
+
+# ----- Helper Functions ----- #
+def _save_debug_pictures(images, original_filename, prefix, subfolder=None):
     """
     Save debug images to disk only if DEBUG_MODE is enabled.
 
@@ -169,7 +182,8 @@ def save_debug_pictures(images, original_filename, prefix, subfolder=None):
         except Exception as e:
             log(f"Failed to save image \"{filename}\": {e}", LogLevel.ERROR)
 
-def clear_debug_folder():
+
+def _clear_debug_folder():
     """
     Clear all generated debug images in the DEBUG_FOLDER. 
     If subfolders are empty after deletion, remove them as well.
@@ -201,15 +215,17 @@ def clear_debug_folder():
                 except Exception as e:
                     log(f"Failed to delete folder \"{dir_path}\": {e}.", LogLevel.ERROR)
 
-def extract_name_regions(image: Image.Image):
+
+def _extract_name_regions(image: Image.Image):
     """
     Extracts name regions from the image using OpenCV and returns them as PIL images.
     """
     # Use the minus button detection method to crop name regions
-    return crop_name_regions_by_minus_buttons(image)
+    return _crop_name_regions_by_minus_buttons(image)
 
-# New: crop name regions using minus button positions
-def crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: int = 5) -> list[Image.Image]:
+
+# Crop name regions using minus button positions
+def _crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: int = 5) -> list[Image.Image]:
     """
     Crop name regions by detecting minus buttons in an already enlarged image.
 
@@ -220,9 +236,9 @@ def crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: i
         List[PIL.Image]: Cropped name regions.
     """
     try:
-        image_cv2 = pil_to_cv2_gray(enlarged_image)
+        image_cv2 = _pil_to_cv2_gray(enlarged_image)
 
-        matched_points_with_scale = match_template(image_cv2, BUTTON_TEMPLATE_CV2, MATCH_SCALES, threshold=0.8)
+        matched_points_with_scale = _match_template(image_cv2, BUTTON_TEMPLATE_CV2, MATCH_SCALES, threshold=0.8)
         if not matched_points_with_scale:
             log("No area matched with template.", LogLevel.WARN)
             return []
@@ -272,7 +288,8 @@ def crop_name_regions_by_minus_buttons(enlarged_image: Image.Image, tolerance: i
         log(f"Failed to extract name regions: {e}", LogLevel.ERROR)
         return []
 
-def match_template(
+
+def _match_template(
     image_gray: np.ndarray,
     template_gray: np.ndarray,
     scales: list[float],
@@ -304,11 +321,12 @@ def match_template(
 
         # Optional: remove duplicates from overlapping scale matches
         matched_points.extend([(x, y, scale) for (x, y) in points])
-        matched_points = deduplicate_matches(matched_points, tolerance=10)
+        matched_points = _deduplicate_matches(matched_points, tolerance=10)
 
     return matched_points
 
-def deduplicate_matches(points: list[tuple[int, int, float]], tolerance: int = 10,
+
+def _deduplicate_matches(points: list[tuple[int, int, float]], tolerance: int = 10,
                         strategy: MergeStrategy = MergeStrategy.MIDDLE) -> list[tuple[int, int, float]]:
     """
     Merge nearby matching points (possibly from different scales) into unique points.
@@ -351,14 +369,15 @@ def deduplicate_matches(points: list[tuple[int, int, float]], tolerance: int = 1
 
     return result
 
-def preprocess_v1(image: Image.Image) -> Image.Image:
-    # Convert to grayscale, and optionally increase contrast slightly
+
+# V1: Convert to grayscale, and optionally increase contrast slightly
+def _preprocess_v1(image: Image.Image) -> Image.Image:
     gray = image.convert("L")
     contrast = ImageOps.autocontrast(gray, cutoff=10)  # Apply slight contrast enhancement
     return contrast
 
-# New V2: Contrast enhancement and moderate sharpening
-def preprocess_v2(image: Image.Image) -> Image.Image:
+# V2: Contrast enhancement and moderate sharpening
+def _preprocess_v2(image: Image.Image) -> Image.Image:
     gray = image.convert("L")
     # Enhance contrast (slightly higher cutoff to preserve more details)
     enhanced = ImageOps.autocontrast(gray, cutoff=15)
@@ -366,22 +385,22 @@ def preprocess_v2(image: Image.Image) -> Image.Image:
     sharpened = enhanced.filter(ImageFilter.UnsharpMask(radius=1, percent=150, threshold=3))
     return sharpened
 
-# New V3: Moderate sharpening with a customized kernel
-def preprocess_v3(image: Image.Image) -> Image.Image:
+# V3: Moderate sharpening with a customized kernel
+def _preprocess_v3(image: Image.Image) -> Image.Image:
     gray = np.array(image.convert("L"))
     # Custom sharpening kernel (slightly less aggressive)
     sharpened = cv2.filter2D(gray, -1, SHARPEN_KERNEL)
     return Image.fromarray(sharpened)
 
-# New V4: CLAHE (Contrast Limited Adaptive Histogram Equalization) with optimized parameters
-def preprocess_v4(image: Image.Image) -> Image.Image:
+# V4: CLAHE (Contrast Limited Adaptive Histogram Equalization) with optimized parameters
+def _preprocess_v4(image: Image.Image) -> Image.Image:
     gray = np.array(image.convert("L"))
     # Apply CLAHE with moderate clipping limit and a larger grid size for better general contrast
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16, 16))  # Reduced clipLimit, increased gridSize
     equalized = clahe.apply(gray)
     return Image.fromarray(equalized)
 
-def preprocess_all_versions(image: Image.Image) -> dict[str, Image.Image]:
+def _preprocess_all_versions(image: Image.Image) -> dict[str, Image.Image]:
     """
     Apply multiple preprocessing versions to the input image.
     
@@ -389,13 +408,14 @@ def preprocess_all_versions(image: Image.Image) -> dict[str, Image.Image]:
         A dictionary with version names as keys and processed PIL.Images as values.
     """
     return {
-        "v1": preprocess_v1(image),
-        "v2": preprocess_v2(image),
-        "v3": preprocess_v3(image),
-        "v4": preprocess_v4(image),
+        "v1": _preprocess_v1(image),
+        "v2": _preprocess_v2(image),
+        "v3": _preprocess_v3(image),
+        "v4": _preprocess_v4(image),
     }
-    
-def perform_ocr_on_versions(name_images, whitelist_path):
+
+
+def _perform_ocr_on_versions(name_images, whitelist_path):
     config = f"--psm 7"
     
     ocr_results = []
@@ -415,7 +435,8 @@ def perform_ocr_on_versions(name_images, whitelist_path):
     
     return ocr_results
 
-def match_player_names(recognized_names, player_list, version_label):
+
+def _match_player_names(recognized_names, player_list, version_label):
     matched = []
 
     # Normalize player list to lowercase
@@ -444,6 +465,8 @@ def match_player_names(recognized_names, player_list, version_label):
 
     return matched
 
+
+# ----- Daily summary Main Functions ----- #
 def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
     today = datetime.today()
 
@@ -473,27 +496,30 @@ def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
             image = Image.open(full_path)
 
             # Step 1: Enlarge the image first
-            enlarged_image = enlarge_image(image)
-            save_debug_pictures(enlarged_image, file, "s0_enlarged", folder_name)
+            enlarged_image = _enlarge_image(image)
+            if SCREENSHOT_DEBUG_MODE:
+                _save_debug_pictures(enlarged_image, file, "s0_enlarged", folder_name)
 
             # Step 2: Detect name regions
-            name_region_images = extract_name_regions(enlarged_image)
-            save_debug_pictures(name_region_images, file, "s1_extracted", folder_name)
+            name_region_images = _extract_name_regions(enlarged_image)
+            if SCREENSHOT_DEBUG_MODE:
+                _save_debug_pictures(name_region_images, file, "s1_extracted", folder_name)
 
             image_matched_players = set()
 
             # Step 3: For each name region, preprocess into multiple versions and OCR
             for idx, region in enumerate(name_region_images):
-                version_images = preprocess_all_versions(region)
-                save_debug_pictures(version_images.values(), file, f"s2_preprocessed_{idx}", folder_name)
+                version_images = _preprocess_all_versions(region)
+                if SCREENSHOT_DEBUG_MODE:
+                    _save_debug_pictures(version_images.values(), file, f"s2_preprocessed_{idx}", folder_name)
 
                 region_matched_players = set()
 
                 for version_label, version_image in version_images.items():
-                    recognized_names = perform_ocr_on_versions([version_image], wordlist_path)
+                    recognized_names = _perform_ocr_on_versions([version_image], wordlist_path)
                     #log(f"[Region {idx}][{version_label}] OCR recognized: {recognized_names}", LogLevel.DEBUG)
 
-                    matched_results = match_player_names(recognized_names, player_list, version_label)
+                    matched_results = _match_player_names(recognized_names, player_list, version_label)
                     #log(f"[Region {idx}][{version_label}] Matched results: {matched_results}", LogLevel.DEBUG)
 
                     for name, version in matched_results:
@@ -548,4 +574,6 @@ def parse_screenshot_file(folder_name: str, player_list, wordlist_path):
     else:
         return None, None
 
-clear_debug_folder()
+
+# ----- Initialization ----- #
+_clear_debug_folder()

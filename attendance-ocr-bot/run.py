@@ -13,10 +13,12 @@ import requests
 import tkinter as tk
 from datetime import datetime
 
+# Load settings first and ensure it's initialized
+import botcore.config.settings
+
 from gui.auth_interface import show_auth_file_warning, show_auth_failed_warning
 from gui.main_interface import AttendanceBotGUI
 from gui.trial_notice_interface import show_trial_expired_warning, show_trial_notice
-import botcore.config.settings
 from botcore.config.static_settings import IF_TRIAL_VERSION, EXPIRE_DATE
 from botcore.logging.log_file_manager import shutdown_runtime_log
 from botcore.core.auth_manager import auth_manager
@@ -70,7 +72,7 @@ def main() -> None:
     root = tk.Tk()
     root.title("Attendance Bot for Griffin Empire - created by @DragonTaki")
     root.geometry("1280x720")
-    app = AttendanceBotGUI(root)
+    app = AttendanceBotGUI(root, show_welcome=True)
     app.pack(fill="both", expand=True)
     root.mainloop()
 

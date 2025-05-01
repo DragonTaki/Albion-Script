@@ -8,7 +8,6 @@
 # Version: v1.0
 # ----- ----- ----- -----
 
-import requests
 import base64
 import json
 import hashlib
@@ -16,6 +15,9 @@ import os
 from typing import Any, Dict, Literal, Optional
 
 from botcore.config.constant import TEXTFILE_ENCODING
+from botcore.config.settings_manager import get_settings
+settings = get_settings()
+from botcore.utils.network_utils import safe_web_fetch
 
 # Constants
 AUTH_FILENAME = "auth.json"
@@ -27,7 +29,7 @@ class AuthConfig:
     REQUIRED_FIELDS = {USERNAME_FIELD, KEY_FIELD, TOKEN_FIELD}
 
 
-# ----- Utility Functions -----
+# ----- Helper Functions ----- #
 def _generate_auth_template(file_path: str = AUTH_FILENAME) -> None:
     """
     Generate a template auth.json file if missing or invalid.
@@ -50,6 +52,7 @@ def _generate_auth_template(file_path: str = AUTH_FILENAME) -> None:
     except Exception as e:
         print(f"Error creating template auth file: {e}")
 
+
 def _get_hash(key: str, username: str) -> str:
     """
     Generate a SHA-256 hash using the user's key and username as salt.
@@ -69,6 +72,7 @@ def _get_hash(key: str, username: str) -> str:
         100000  # Iteration count
     )
     return hashed.hex()
+
 
 def _load_auth_data(file_path: str = AUTH_FILENAME) -> Optional[Dict[str, str]]:
     """
@@ -104,6 +108,7 @@ def _load_auth_data(file_path: str = AUTH_FILENAME) -> Optional[Dict[str, str]]:
         print(f"Error reading auth file: {e}")
         return None
 
+
 def _get_keys_from_github(token: str) -> Optional[Dict[str, Any]]:
     """
     Fetch encrypted API keys from the GitHub repository.
@@ -119,19 +124,14 @@ def _get_keys_from_github(token: str) -> Optional[Dict[str, Any]]:
     FILE_PATH = "albion-attendance-bot/api_keys.json"
 
     url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
-    headers = {
-        "Authorization": f"token {token}"
-    }
+    HEADERS = {"Authorization": f"token {token}"}
 
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Error fetching keys from GitHub: {e}")
+    response_json = safe_web_fetch(url, headers=HEADERS, context="GitHub API keys", use_logger=False)
+    if not response_json:
         return None
 
     try:
-        file_content = response.json().get("content")
+        file_content = response_json.get("content")
         if not file_content:
             print("Error: No content found in GitHub response.")
             return None
@@ -143,6 +143,7 @@ def _get_keys_from_github(token: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         print(f"Error decoding GitHub file content: {e}")
         return None
+
 
 def _validate_user(username: str, key: str, api_keys: Dict[str, Any]) -> bool:
     """
@@ -173,7 +174,7 @@ def _validate_user(username: str, key: str, api_keys: Dict[str, Any]) -> bool:
     return False
 
 
-# ----- Main Authentication Manager -----
+# ----- Main Function ----- #
 def auth_manager() -> Literal["success", "fail", "undefined"]:
     """
     Main entry point for authenticating a user.
@@ -198,13 +199,14 @@ def auth_manager() -> Literal["success", "fail", "undefined"]:
 
     if _validate_user(username, key, api_keys):
         print(f"✅ User '{username}' is authorized.")
+        settings.current_user = username
         return "success"
     else:
         print(f"❌ User '{username}' is not authorized.")
         return "fail"
 
 
-# ----- Entrypoint -----
+# ----- Entrypoint ----- #
 if __name__ == "__main__":
     result = auth_manager()
     print(f"Authentication result: {result}")

@@ -1,6 +1,7 @@
 # Ignore users file
 attendance_data/
 cache/
+log/
 report/
 temp/
 temp_debug/
@@ -15,6 +16,8 @@ secret.key
 api_keys.json
 api_keys_raw.json
 auth.json
+settings.json
+settings.json.broken
 
 # Don't ignore all files in the third_party directory
 !/third_party/*
