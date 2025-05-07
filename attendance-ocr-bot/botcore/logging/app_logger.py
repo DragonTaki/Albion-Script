@@ -4,8 +4,8 @@
 # Do not distribute or modify
 # Author: DragonTaki (https://github.com/DragonTaki)
 # Create Date: 2025/04/18
-# Update Date: 2025/05/01
-# Version: v1.4
+# Update Date: 2025/05/07
+# Version: v1.5
 # ----- ----- ----- -----
 
 import json
@@ -153,26 +153,28 @@ def log_welcome_message() -> None:
     welcome = "Welcome to use Griffin Empire Attendance Bot!"
     author  = "Author: DragonTaki"
 
-    rainbow_line = [{
-        "text": char,
-        "color": pastel_rainbow_colors[i % len(pastel_rainbow_colors)],
-        "bold": True,
-        "tag": f"rainbow_{i}"
-    } for i, char in enumerate(welcome)]
-
-    try:
-        external_logger(json.dumps([{
-            "text": greeting + "\n",
+    greeting_json = json.dumps([{
+            "text": greeting,
             "color": "lightgreen",
             "bold": True,
             "tag": "greeting_tag"
-        }]))
-        external_logger(json.dumps(rainbow_line))
-        external_logger(json.dumps([{
-            "text": "\n" + author + "\n",
+        }])
+    welcome_json = json.dumps([{
+            "text": char,
+            "color": pastel_rainbow_colors[i % len(pastel_rainbow_colors)],
+            "bold": True,
+            "tag": f"rainbow_{i}"
+        } for i, char in enumerate(welcome)])
+    author_json = json.dumps([{
+            "text": author,
             "color": "cyan",
             "italic": True,
             "tag": "author_tag"
-        }]))
+        }])
+
+    try:
+        external_logger(greeting_json)
+        external_logger(welcome_json)
+        external_logger(author_json)
     except Exception as e:
         print(f"[WELCOME ERROR] Failed to send welcome message: {e}")
