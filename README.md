@@ -1,14 +1,26 @@
-# 🛡️ Malicious Crew | Albion Online Guild
+[![Python](https://img.shields.io/badge/Built%20with-Python-3776AB?style=flat-square&logo=python&logoColor=ffdd54)](https://www.python.org/)
+[![Built with Google Apps Script](https://img.shields.io/badge/Built%20with-Google%20Apps%20Script-4285F4?style=flat-square&logo=google&logoColor=white)](https://developers.google.com/apps-script)
+
+---
+
+## ☢️NOTICE
+#### WE MERGED WITH CCTV/CMCC GUILD!
+
+---
+
+## 💡 About This Project
+
+This project is only for private use.  
+If your guild need an attendance bot, please contact me.
+
+---
+
+## 🛡️ About Malicious Crew | Albion Online Guild (CLOSED)
 
 [![Recruit Now](https://img.shields.io/badge/Recruit%20Now-5865F2?logo=discord&logoColor=white&style=flat-square)](https://discord.com/invite/9dNKCMj9G5)
 [![Killboard - Malicious Crew](https://img.shields.io/badge/Killboard-MC-red?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/59YXPiViQdWXaARvPNyvMA)
 [![Killboard - Tang Yuan](https://img.shields.io/badge/Killboard-TY-orange?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/k0TF-1dGQLSBmWqusGHBHQ)
 [![Killboard - MC Holdings](https://img.shields.io/badge/Killboard-MCH-yellow?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/Pem3HYHsTm-2L68uAaLDVg)
-[![Built with Google Apps Script](https://img.shields.io/badge/Built%20with-Google%20Apps%20Script-4285F4?style=flat-square&logo=google&logoColor=white)](https://developers.google.com/apps-script)
-
----
-
-## 🛡️ About Us
 
 **Malicious Crew** is an active international guild in **Albion Online**, mainly focused on **ZvZ fights**.
 We also participate in **small-to-mid scale fights**, have **inner-ring crafting hideouts**, and do **official econ runs**.
@@ -17,7 +29,7 @@ We also participate in **small-to-mid scale fights**, have **inner-ring crafting
 
 ## 📊 Data Sources
 
-Our guild tools rely on official and third-party Albion Online data:
+This tool rely on official and third-party Albion Online data:
 
 ### 🔹 Official
 - [Albion Online API (Guild Members)](https://gameinfo-sgp.albiononline.com/api/gameinfo/guilds/)
@@ -28,7 +40,8 @@ Our guild tools rely on official and third-party Albion Online data:
 - [Guild Stats - MC Holdings](https://albiononline.com/en/killboard/guild/Pem3HYHsTm-2L68uAaLDVg)
 
 ### 🔸 Third-party
-- [AlbionBattles Killboard (East Server)](https://east.albionbattles.com/)
+- [Albionbattles.com Attendance (East Server)](https://east.albionbattles.com/attendance)
+- [Albionbattles.com Killboard (East Server)](https://east.albionbattles.com/)
 - [Tools4Albion](https://www.tools4albion.com/)
 
 ---
@@ -42,9 +55,7 @@ For questions, feedback, or if you're interested in joining **Malicious Crew**, 
 
 ## 📜 Third-Party Licenses
 
-This project uses **Tesseract OCR**, licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
-
-This product includes software developed by the Tesseract OCR project (https://github.com/tesseract-ocr/tesseract) and is licensed under the Apache License, Version 2.0.
+This project uses [**Tesseract OCR project**](https://github.com/tesseract-ocr/tesseract), licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
 > This repository **does not provide any license or redistribution rights** for its own code.  
 > It is intended for **private use only** within the Malicious Crew guild in Albion Online.
