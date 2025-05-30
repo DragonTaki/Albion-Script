@@ -1,0 +1,188 @@
+{
+  "HotKey": {
+    "KeyCode": "Keypad7",
+    "Modifier": "None"
+  },
+  "IsActive": true,
+  "Name": "TakiDefault",
+  "Version": 2,
+  "Values": {
+    "DisplayMode": 2,
+    "Quality": 4,
+    "SkipIntroVideo": true,
+    "GraphicsOptions": {
+      "PrefabQuality": 3,
+      "Shadow": 2,
+      "ShadowResolution": 3,
+      "ShadowCascades": 4,
+      "ShadowDistance": 150,
+      "ShaderQuality": 800,
+      "FootStepQuality": 0,
+      "ShowEffects": 2,
+      "PixelLightCount": 18,
+      "AnisotropicTextureFiltering": 2,
+      "AnimationBlendWeights": 4,
+      "SpellOcclusion": 7,
+      "SMAA": 2,
+      "SSAO": 4,
+      "Bloom": 1,
+      "SoftParticles": 0,
+      "WindowAnimations": 1,
+      "HighlightObscured": 1,
+      "CameraShake": 0,
+      "AnimatedVegetation": 1
+    },
+    "MountSkinVisibilityModes": [
+      0,
+      0,
+      1
+    ],
+    "WardrobeVisibilityModes": [
+      0,
+      0,
+      1
+    ],
+    "HideLoginCredentials": false,
+    "MasterVolume": 0.49758786,
+    "MusicVolume": 0.0961570442,
+    "SoundVolume": 0.5000192,
+    "AmbienceVolume": 0.5000192,
+    "ChatAutoHide": true,
+    "ChatWindowLocked": true,
+    "ChatBackgroundOpacity": 0.4,
+    "ChatFocusedOpacity": 0.7,
+    "ChatTextSize": 0.4,
+    "AutoDenyDuelRequest": true,
+    "AutoDenyGuildInvite": false,
+    "AutoDenyCustomMatchInvite": true,
+    "EnabledProfanityFilters": [],
+    "SpellCastScheme": 1,
+    "CursorSet": 2,
+    "MouseDoubleClickAttack": true,
+    "ControllerSpellMarkerSensitivity": 0.2,
+    "ControllerLeftStickDeadZone": 0.1,
+    "ControllerRightStickDeadZone": 0.1,
+    "ControllerCursorSensitivity": 0.2,
+    "ShowActivityPopupOnLogin": false,
+    "ShowOnlyOwnNumbers": true,
+    "SpellIndicatorIntensity": 1.0,
+    "ShowSpellIndicatorEnemyDamage": true,
+    "ShowSpellIndicatorAllyHeal": true,
+    "ShowOwnGuildName": true,
+    "ShowNamesOfGuildAllianceMembers": true,
+    "ShowHitbarOfGuildAllianceMembers": true,
+    "ShowGuildNameOfGuildAllianceMembers": true,
+    "ShowGuildNameOfNonGuildAllianceMembers": true,
+    "ShowLargeNameTag": false,
+    "PartySmallView": true,
+    "PartySortByRole": true,
+    "PartyShowMarkers": true,
+    "PartyShowMountHealth": true,
+    "PartyRolePriority": [
+      "Support",
+      "DPS",
+      "Ranged_DPS",
+      "Heal",
+      "Tank",
+      "BattleMount"
+    ],
+    "TravelModeCenterPlayer": false,
+    "Desktop_SelectedHudLayoutId": "94a94d63-b193-49e3-a649-9c4f9ccbf2df",
+    "KeyBindings": {
+      "Overcharge": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember13": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember14": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember15": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember16": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember17": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember18": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember19": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "SelectPartyMember20": {
+        "KeyCode": "None",
+        "Modifier": "None"
+      },
+      "AutoRun": {
+        "KeyCode": "BackQuote",
+        "Modifier": "None"
+      },
+      "MarkObject1": {
+        "KeyCode": "Keypad1",
+        "Modifier": "None"
+      },
+      "MarkObject2": {
+        "KeyCode": "Keypad2",
+        "Modifier": "None"
+      },
+      "MarkObject3": {
+        "KeyCode": "Keypad3",
+        "Modifier": "None"
+      },
+      "MarkObject4": {
+        "KeyCode": "Keypad4",
+        "Modifier": "None"
+      },
+      "MarkObject5": {
+        "KeyCode": "Keypad5",
+        "Modifier": "None"
+      },
+      "MarkObject6": {
+        "KeyCode": "Keypad6",
+        "Modifier": "None"
+      },
+      "UnMarkObject": {
+        "KeyCode": "Keypad0",
+        "Modifier": "None"
+      },
+      "SelectMarkedObject5": {
+        "KeyCode": "KeypadPeriod",
+        "Modifier": "None"
+      }
+    },
+    "GammaSetting": 0.198585436,
+    "UseVSync": true,
+    "TravelModeIconTransparency": 0.3,
+    "MinimapZoomLevelCity": 0.4,
+    "TravelModeMapTransparency": 0.3,
+    "MinimapZoomLevelOpenWorld": 1.0,
+    "PartyMarkerSize": 2,
+    "MarketPlaceAutoFetch|DragonTaki": true,
+    "KillEmotesVisibility": 1,
+    "MarketPlaceAutoFetch|DragonFandom": false,
+    "MarketPlaceAutoFetch|TheLiz": true,
+    "MountUpBehaviour": 1,
+    "MarketPlaceAutoFetch|UWUxOWO": true,
+    "MarketPlaceAutoFetch|DragonxDragon": false,
+    "MarketPlaceAutoFetch|RokeiKanso": false,
+    "MarketPlaceAutoFetch|DokiDragon": false,
+    "MarketPlaceAutoFetch|Doragon01": true,
+    "MarketPlaceAutoFetch|Doragon02": true,
+    "MarketPlaceAutoFetch|Doragon04": true,
+    "MarketPlaceAutoFetch|Doragon05": true,
+    "MarketPlaceAutoFetch|Doragon06": true,
+    "PartyHideParty": false
+  }
+}
