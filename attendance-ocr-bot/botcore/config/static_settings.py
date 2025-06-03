@@ -15,6 +15,8 @@ from botcore.safe_namespace import SafeNamespace
 # Guild Info Lists
 GUILD_INFO_LIST = [
     {"name":"Griffin Empire", "id":"sAFfW_tPSkuU_49gvg4sZQ", "tag":"GE"},
+    {"name":"CCTV", "id":"il1QE3MmT3-R12n7dmF11w", "tag":"CCTV"},
+    {"name":"CMCC", "id":"yMz58RMPRymtLQGKc3xCVw", "tag":"CMCC"},
 ]
 
 USED_DATA = SafeNamespace(

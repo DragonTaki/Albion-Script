@@ -3,7 +3,7 @@
 
 ---
 
-## ☢️NOTICE
+## ☢️ NOTICE
 #### WE MERGED WITH CCTV/CMCC GUILD!
 
 ---
@@ -34,10 +34,8 @@ This tool rely on official and third-party Albion Online data:
 ### 🔹 Official
 - [Albion Online API (Guild Members)](https://gameinfo-sgp.albiononline.com/api/gameinfo/guilds/)
 - [Albion Data Project](https://www.albion-online-data.com/)
-- [Official Killboard](https://albiononline.com/en/killboard)
-- [Guild Stats - Malicious Crew](https://albiononline.com/en/killboard/guild/59YXPiViQdWXaARvPNyvMA)
-- [Guild Stats - Tang Yuan](https://albiononline.com/en/killboard/guild/k0TF-1dGQLSBmWqusGHBHQ)
-- [Guild Stats - MC Holdings](https://albiononline.com/en/killboard/guild/Pem3HYHsTm-2L68uAaLDVg)
+- [Official Killboard](https://albiononline.com/killboard)
+- Guild Stats table - See here 👉 [guild_id.md](data/guild_id.md)
 
 ### 🔸 Third-party
 - [Albionbattles.com Attendance (East Server)](https://east.albionbattles.com/attendance)
