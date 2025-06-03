@@ -35,7 +35,7 @@ This tool rely on official and third-party Albion Online data:
 - [Albion Online API (Guild Members)](https://gameinfo-sgp.albiononline.com/api/gameinfo/guilds/)
 - [Albion Data Project](https://www.albion-online-data.com/)
 - [Official Killboard](https://albiononline.com/killboard)
-- Guild Stats table - See here 👉 [guild_id.md](data/guild_id.md)
+- Guild Stats - Table see here 👉 [guild_id.md](attendance-ocr-bot/data/guild_id.md)
 
 ### 🔸 Third-party
 - [Albionbattles.com Attendance (East Server)](https://east.albionbattles.com/attendance)
