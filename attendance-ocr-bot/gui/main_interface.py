@@ -85,6 +85,8 @@ class AttendanceBotGUI(tk.Frame):
         super().__init__(root)
         self.root = root
 
+        self._just_cleared_selection = False
+
         self.button_row_configs = [
             ("Step 1: Get database"),
             ("Fetch member list", self.fetch_member_list_task),
@@ -117,6 +119,8 @@ class AttendanceBotGUI(tk.Frame):
         self.bind("<Configure>", self.update_sizes)
         self.create_widgets()
         set_external_logger(self.log)
+        self.logger.bind("<Button-1>", self._on_mouse_down)
+        self.logger.bind("<ButtonRelease-1>", self._on_mouse_up_select_line)
         if show_welcome:
             from botcore.logging.app_logger import log_welcome_message
             log_welcome_message()
@@ -487,6 +491,46 @@ class AttendanceBotGUI(tk.Frame):
 
     def not_done_yet_task(self):
         log("This function is not done...")
+        
+    def _on_mouse_down(self, event):
+        print("_on_mouse_down!")
+        self._click_index = self.logger.index(f"@{event.x},{event.y}")
+
+    def _on_mouse_up_select_line(self, event):
+        print("_on_mouse_up_select_line!")
+        release_index = self.logger.index(f"@{event.x},{event.y}")
+
+        # 拖曳選取中，不處理自動邏輯
+        try:
+            start = self.logger.index(tk.SEL_FIRST)
+            end = self.logger.index(tk.SEL_LAST)
+            if start != end:
+                # 拖曳選取，保留選取，不影響自動行為
+                self._just_cleared_selection = False
+                return
+        except tk.TclError:
+            # 無選取時會拋錯，忽略
+            pass
+
+        # 已選取，且不是拖曳 -> 先取消選取，並標記剛清除過
+        if self.logger.tag_ranges(tk.SEL) and not self._just_cleared_selection:
+            self.logger.tag_remove(tk.SEL, "1.0", tk.END)
+            self._just_cleared_selection = True
+            return
+
+        # 如果剛剛清除過，這次點擊不自動選取，重置旗標
+        if self._just_cleared_selection:
+            self._just_cleared_selection = False
+            return
+
+        # 無選取，且沒有剛清除過，自動選取整行
+        line_index = release_index.split('.')[0]
+        line_start = f"{line_index}.0"
+        line_end = f"{line_index}.end"
+        self.logger.tag_add(tk.SEL, line_start, line_end)
+        self.logger.mark_set(tk.INSERT, line_end)
+        self.logger.see(tk.INSERT)
+        self._just_cleared_selection = False
 
 '''
 if __name__ == "__main__":

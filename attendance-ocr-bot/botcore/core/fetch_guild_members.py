@@ -18,8 +18,17 @@ from botcore.utils.network_utils import safe_web_fetch
 # ----- Constants ----- #
 API_BASE_URL = "https://gameinfo-sgp.albiononline.com/api/gameinfo"
 API_ENDPOINT_TEMPLATE = f"{API_BASE_URL}/guilds/{{guild_id}}/members"
-HEADERS = {"Accept": "application/json, text/plain, */*"}
-
+#HEADERS = {"Accept": "application/json, text/plain, */*"}
+HEADERS = {
+    "Accept": "application/json, text/plain, */*",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/114.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://albiononline.com/",
+    "Origin": "https://albiononline.com",
+}
 
 # ----- Main Function ----- #
 def fetch_guild_members(if_save_to_cache: bool = True) -> dict[str, str]:
@@ -44,6 +53,7 @@ def fetch_guild_members(if_save_to_cache: bool = True) -> dict[str, str]:
         data = safe_web_fetch(url, headers=HEADERS, context=f"{guild_name} members")
         if not data:
             log(f"No data returned from API for {guild_name}.", LogLevel.ERROR)
+            log(f"Please manually open this link in your browser: {url}", LogLevel.WARN)
             continue
 
         for player in data:

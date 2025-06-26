@@ -8,6 +8,7 @@
 # Version: v1.0
 # ----- ----- ----- -----
 
+import random
 import requests
 import time
 from typing import Optional, Union
@@ -44,6 +45,7 @@ def safe_web_fetch(
                 return response.json()
             else:
                 msg = f"HTTP {response.status_code} error while fetching {context or url} (Attempt {attempt}/{retries})."
+                #print(response.text)
                 if use_logger:
                     log(msg, LogLevel.ERROR)
                 else:
@@ -56,6 +58,7 @@ def safe_web_fetch(
                 print(msg)
 
         if attempt < retries:
-            time.sleep(delay_sec)
+            randomized_delay = delay_sec + random.uniform(0, 1)
+            time.sleep(randomized_delay)
 
     return None

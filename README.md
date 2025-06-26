@@ -4,7 +4,8 @@
 ---
 
 ## ☢️ NOTICE
-#### WE MERGED WITH CCTV/CMCC GUILD!
+
+I already left MC/CCTV. Now for content only.
 
 ---
 
@@ -21,6 +22,8 @@ If your guild need an attendance bot, please contact me.
 [![Killboard - Malicious Crew](https://img.shields.io/badge/Killboard-MC-red?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/59YXPiViQdWXaARvPNyvMA)
 [![Killboard - Tang Yuan](https://img.shields.io/badge/Killboard-TY-orange?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/k0TF-1dGQLSBmWqusGHBHQ)
 [![Killboard - MC Holdings](https://img.shields.io/badge/Killboard-MCH-yellow?style=flat-square&logo=albiononline&logoColor=white)](https://albiononline.com/en/killboard/guild/Pem3HYHsTm-2L68uAaLDVg)
+
+#### WE MERGED WITH CCTV/CMCC GUILD!
 
 **Malicious Crew** is an active international guild in **Albion Online**, mainly focused on **ZvZ fights**.
 We also participate in **small-to-mid scale fights**, have **inner-ring crafting hideouts**, and do **official econ runs**.
